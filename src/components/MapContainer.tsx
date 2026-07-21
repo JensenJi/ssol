@@ -169,14 +169,14 @@ export default function MapContainer({
     init();
   }, []);
 
-  // 大头针 SVG 图片（圆头+针身+针尖，直立）
+  // 大头针 SVG 图片（正方形 viewBox，直立，针身长）
   const createPushpinSVG = (color: string) => {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 48" width="32" height="48">
-      <circle cx="16" cy="10" r="9" fill="${color}"/>
-      <circle cx="13" cy="7" r="3" fill="rgba(255,255,255,0.45)"/>
-      <rect x="14.5" y="18" width="3" height="22" rx="1.5" fill="#b0b0b0"/>
-      <rect x="15.2" y="20" width="1" height="18" rx="0.5" fill="rgba(255,255,255,0.35)"/>
-      <polygon points="14.5,40 17.5,40 16,46" fill="#888"/>
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+      <circle cx="20" cy="10" r="8" fill="${color}"/>
+      <circle cx="17" cy="7" r="2.5" fill="rgba(255,255,255,0.45)"/>
+      <rect x="18.5" y="17" width="3" height="16" rx="1.5" fill="#b0b0b0"/>
+      <rect x="19.2" y="19" width="1" height="12" rx="0.5" fill="rgba(255,255,255,0.35)"/>
+      <polygon points="18.5,33 21.5,33 20,38" fill="#888"/>
     </svg>`;
     return `image://data:image/svg+xml,${encodeURIComponent(svg)}`;
   };

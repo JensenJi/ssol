@@ -75,7 +75,7 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
 .keyword-float-container {
   position: relative;
   width: 100%;
-  height: 70px;
+  height: 100px;
   overflow: hidden;
 }
 .kw-float-tag {
