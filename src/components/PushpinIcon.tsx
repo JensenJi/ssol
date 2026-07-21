@@ -13,7 +13,7 @@ export default function PushpinIcon({ size = 28, color = '#1677ff', className, s
       height={size}
       viewBox="0 0 64 64"
       className={className}
-      style={style}
+      style={{ transform: 'rotate(45deg)', ...style }}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
