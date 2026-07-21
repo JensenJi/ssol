@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { ConfigProvider, message, Modal } from 'antd';
-import { LoginOutlined } from '@ant-design/icons';
+import { ConfigProvider, message, Modal, Button } from 'antd';
+import { LoginOutlined, UpOutlined, TableOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
 import Navbar from './components/Navbar';
 import MapContainer from './components/MapContainer';
@@ -46,6 +46,7 @@ function App() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [pendingUsers, setPendingUsers] = useState<Partial<Doctor>[]>([]);
   const [experts, setExperts] = useState<Doctor[]>(mockDoctors.filter(d => d.verified));
+  const [tableExpanded, setTableExpanded] = useState(false);
 
   // 从云开发加载认证专家数据
   useEffect(() => {
@@ -244,7 +245,19 @@ function App() {
               locationName={locationName}
               onMapClick={handleMapClick} onMarkerClick={handleMarkerClick} onLocationName={handleLocationName}
             />
-            <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
+            <div className="toggle-table-btn">
+              <Button
+                type="text"
+                size="small"
+                icon={tableExpanded ? <UpOutlined /> : <TableOutlined />}
+                onClick={() => setTableExpanded(!tableExpanded)}
+              >
+                {tableExpanded ? '收起列表' : `展开全部列表 (${filteredDoctors.length}人)`}
+              </Button>
+            </div>
+            <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`}>
+              <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
+            </div>
           </div>
           <div className="content-right">
             <Sidebar
