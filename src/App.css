@@ -27,10 +27,10 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
   display: inline-block;
 }
 @keyframes iconBounce {
-  0% { transform: translateX(-220px) rotate(-15deg); opacity: 0; }
-  50% { transform: translateX(5px) rotate(5deg); opacity: 1; }
-  70% { transform: translateX(-3px) rotate(-2deg); }
-  100% { transform: translateX(0) rotate(0deg); opacity: 1; }
+  0% { transform: translateX(-220px) rotate(-60deg); opacity: 0; }
+  50% { transform: translateX(5px) rotate(-40deg); opacity: 1; }
+  70% { transform: translateX(-3px) rotate(-47deg); }
+  100% { transform: translateX(0) rotate(-45deg); opacity: 1; }
 }
 .navbar-search { display: flex; align-items: center; flex: 1; max-width: 480px; justify-content: center; }
 .navbar-actions { flex-shrink: 0; }

@@ -103,7 +103,7 @@ export default function MapContainer({
           borderWidth: 1,
           textStyle: { color: '#333', fontSize: 13 },
           formatter: (p: any) => {
-            if (p.seriesType === 'effectScatter' && p.data) {
+            if (p.seriesType === 'scatter' && p.data) {
               return `<div style="padding:4px"><strong>${p.data.name}</strong><br/><span style="color:#666;font-size:12px">${p.data.title || ''}</span></div>`;
             }
             return p.name || '';
@@ -131,7 +131,7 @@ export default function MapContainer({
 
       // 点击地图区域 → 设置位置
       chart.on('click', (params: any) => {
-        if (params.seriesType === 'effectScatter' && params.data) {
+        if (params.seriesType === 'scatter' && params.data) {
           // 点击了标记点 → 打开详情
           const doc = doctors.find((d) => d.name === params.data.name);
           if (doc) onMarkerClick(doc);
@@ -171,12 +171,12 @@ export default function MapContainer({
 
   // 大头针 SVG 图片（圆头+针身+针尖）
   const createPushpinSVG = (color: string) => {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 64" width="48" height="64">
-      <circle cx="24" cy="14" r="12" fill="${color}"/>
-      <circle cx="20" cy="10" r="4" fill="rgba(255,255,255,0.4)"/>
-      <rect x="22" y="24" width="4" height="30" rx="2" fill="#b0b0b0"/>
-      <rect x="23" y="26" width="1.5" height="26" rx="1" fill="rgba(255,255,255,0.3)"/>
-      <polygon points="22,54 26,54 24,62" fill="#888"/>
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+      <circle cx="24" cy="14" r="10" fill="${color}"/>
+      <circle cx="20" cy="10" r="3.5" fill="rgba(255,255,255,0.45)"/>
+      <rect x="22" y="22" width="4" height="18" rx="2" fill="#b0b0b0"/>
+      <rect x="22.8" y="24" width="1.2" height="14" rx="0.6" fill="rgba(255,255,255,0.35)"/>
+      <polygon points="22,40 26,40 24,46" fill="#888"/>
     </svg>`;
     return `image://data:image/svg+xml,${encodeURIComponent(svg)}`;
   };
@@ -208,26 +208,24 @@ export default function MapContainer({
     chartRef.current.setOption({
       series: [
         {
-          type: 'effectScatter',
+          type: 'scatter',
           coordinateSystem: 'geo',
           data: [...scatterData, ...userScatter],
-          symbolSize: 24,
+          symbolSize: 32,
           symbolRotate: -45,
-          showEffectOn: 'render',
-          rippleEffect: { brushType: 'stroke', scale: 2.5 },
           label: {
             show: true,
             formatter: (p: any) => p.data?.name || '',
             position: 'right',
             fontSize: 11,
             color: '#333',
-            backgroundColor: 'rgba(255,255,255,0.8)',
+            backgroundColor: 'rgba(255,255,255,0.85)',
             padding: [2, 6],
             borderRadius: 4,
           },
           emphasis: {
             scale: true,
-            itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' },
+            itemStyle: { shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.25)' },
           },
           zlevel: 1,
         },
