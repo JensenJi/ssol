@@ -43,7 +43,6 @@ function App() {
   const [favTarget, setFavTarget] = useState<Doctor | null>(null);
   const [deviceInfo] = useState(detectDeviceInfo);
   const [currentPage, setCurrentPage] = useState<'home' | 'register' | 'admin' | 'adminLogin'>('home');
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [pendingUsers, setPendingUsers] = useState<Partial<Doctor>[]>([]);
   const [experts, setExperts] = useState<Doctor[]>(mockDoctors.filter(d => d.verified));
   const [tableExpanded, setTableExpanded] = useState(false);
@@ -84,6 +83,21 @@ function App() {
         () => { /* 用户拒绝定位，使用默认北京 */ }
       );
     }
+  }, []);
+
+  // 隐藏的管理后台入口：URL hash 或快捷键 Ctrl+Shift+A
+  useEffect(() => {
+    if (window.location.hash === '#/admin') {
+      setCurrentPage('adminLogin');
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        setCurrentPage('adminLogin');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleSearch = useCallback((keyword: string) => setSearchKeyword(keyword.trim()), []);
@@ -204,16 +218,7 @@ function App() {
     }
   }, []);
 
-  const handleAdminAccess = useCallback(() => {
-    if (isAdminLoggedIn) {
-      setCurrentPage('admin');
-    } else {
-      setCurrentPage('adminLogin');
-    }
-  }, [isAdminLoggedIn]);
-
   const handleAdminLogin = useCallback(() => {
-    setIsAdminLoggedIn(true);
     setCurrentPage('admin');
   }, []);
 
@@ -236,7 +241,6 @@ function App() {
           <Navbar
             onSearch={handleSearch} onLocationSelect={handleLocationSelect} onDistanceSelect={handleDistanceSelect}
             onGoRegister={() => setCurrentPage('register')}
-            onGoAdmin={handleAdminAccess}
           />
         <div className="main-content">
           <div className="content-left">

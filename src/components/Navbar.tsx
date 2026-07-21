@@ -84,10 +84,9 @@ interface NavbarProps {
   onLocationSelect?: (location: string) => void;
   onDistanceSelect?: (distance: number) => void;
   onGoRegister?: () => void;
-  onGoAdmin?: () => void;
 }
 
-export default function Navbar({ onSearch, onLocationSelect, onDistanceSelect, onGoRegister, onGoAdmin }: NavbarProps) {
+export default function Navbar({ onSearch, onLocationSelect, onDistanceSelect, onGoRegister }: NavbarProps) {
   const [keyword, setKeyword] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogLocation, setDialogLocation] = useState<string[]>([]);
@@ -142,7 +141,6 @@ export default function Navbar({ onSearch, onLocationSelect, onDistanceSelect, o
         </div>
         <div className="navbar-actions">
           <Space>
-            <Button type="link" size="small" onClick={onGoAdmin} style={{ color: '#999' }}>管理后台</Button>
             <Button type="primary" icon={<UserAddOutlined />} shape="round" onClick={onGoRegister}>注册/登录</Button>
           </Space>
         </div>
