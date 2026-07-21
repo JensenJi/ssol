@@ -205,7 +205,7 @@ export default function MapContainer({
           data: [...scatterData, ...userScatter],
           symbol: pushpinSymbol,
           symbolSize: 20,
-          symbolRotate: 45,
+          symbolRotate: -45,
           showEffectOn: 'render',
           rippleEffect: { brushType: 'stroke', scale: 2.5 },
           label: {

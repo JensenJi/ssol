@@ -23,7 +23,8 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
 }
 .logo-icon {
   animation: iconBounce 1.2s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-  transform: rotate(45deg);
+  transform: rotate(-45deg);
+  display: inline-block;
 }
 @keyframes iconBounce {
   0% { transform: translateX(-220px) rotate(-15deg); opacity: 0; }
