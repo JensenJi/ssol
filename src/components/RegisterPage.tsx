@@ -112,10 +112,10 @@ export default function RegisterPage({ onBack, onRegister }: RegisterPageProps) 
         <Card className="register-card">
           <Title level={3} style={{ textAlign: 'center', marginBottom: 8 }}>
             <UserOutlined style={{ color: '#1677ff', marginRight: 8 }} />
-            专家入驻申请
+            用户注册
           </Title>
           <Paragraph type="secondary" style={{ textAlign: 'center', marginBottom: 24 }}>
-            人人都是专家，人人服务大家。请填写真实信息，审核通过后即可入驻信息库。
+            告诉我们你的专业和特长，是金子都会发光的。
           </Paragraph>
 
           <Steps
@@ -197,6 +197,9 @@ export default function RegisterPage({ onBack, onRegister }: RegisterPageProps) 
               <Form.Item name="keywords" label="专业关键词" rules={[{ required: true, message: '请输入关键词' }]}>
                 <Input placeholder="用、分隔，如：渐冻症、罕见病、神经疾病" />
               </Form.Item>
+              <div style={{ fontSize: 12, color: '#fa8c16', marginBottom: 16, padding: '8px 12px', background: '#fff7e6', borderRadius: 6, border: '1px solid #ffd591' }}>
+                💡 提示：填写关键词时可以为你的关键词服务定个价，赚取服务报酬。
+              </div>
 
               <Form.Item name="bio" label="自我介绍/能提供的服务" rules={[{ required: true, message: '请简要介绍您的专业服务' }]}>
                 <Input.TextArea rows={4} placeholder="请描述您能为大家提供什么专业服务..." />

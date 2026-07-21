@@ -119,7 +119,7 @@ export default function Navbar({ onSearch, onLocationSelect, onDistanceSelect, o
     <>
       <nav className="navbar">
         <div className="navbar-logo">
-          <PushpinIcon size={40} color="#1677ff" className="logo-icon" />
+          <PushpinIcon size={32} color="#1677ff" className="logo-icon" />
           <span className="logo-text logo-drive-in">搜索在线</span>
           <span className="logo-slogan">搜索在线，你手上的大型人才库。</span>
         </div>

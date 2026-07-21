@@ -7,25 +7,27 @@ interface PushpinIconProps {
 }
 
 export default function PushpinIcon({ size = 28, color = '#1677ff', className, style }: PushpinIconProps) {
+  // viewBox 32x48，高宽比 1.5，保持比例
+  const height = Math.round(size * 1.5);
   return (
     <svg
       width={size}
-      height={size}
-      viewBox="0 0 48 48"
+      height={height}
+      viewBox="0 0 32 48"
       className={className}
       style={style}
       xmlns="http://www.w3.org/2000/svg"
     >
       {/* 圆头（塑料球） */}
-      <circle cx="24" cy="14" r="10" fill={color} />
+      <circle cx="16" cy="10" r="9" fill={color} />
       {/* 圆头高光 */}
-      <circle cx="20" cy="10" r="3.5" fill="rgba(255,255,255,0.45)" />
-      {/* 金属针身 */}
-      <rect x="22" y="22" width="4" height="18" rx="2" fill="#b0b0b0" />
+      <circle cx="13" cy="7" r="3" fill="rgba(255,255,255,0.45)" />
+      {/* 金属针身（加长） */}
+      <rect x="14.5" y="18" width="3" height="22" rx="1.5" fill="#b0b0b0" />
       {/* 针身反光 */}
-      <rect x="22.8" y="24" width="1.2" height="14" rx="0.6" fill="rgba(255,255,255,0.35)" />
+      <rect x="15.2" y="20" width="1" height="18" rx="0.5" fill="rgba(255,255,255,0.35)" />
       {/* 针尖 */}
-      <polygon points="22,40 26,40 24,46" fill="#888" />
+      <polygon points="14.5,40 17.5,40 16,46" fill="#888" />
     </svg>
   );
 }

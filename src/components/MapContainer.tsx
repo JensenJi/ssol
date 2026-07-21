@@ -169,14 +169,14 @@ export default function MapContainer({
     init();
   }, []);
 
-  // 大头针 SVG 图片（圆头+针身+针尖）
+  // 大头针 SVG 图片（圆头+针身+针尖，直立）
   const createPushpinSVG = (color: string) => {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
-      <circle cx="24" cy="14" r="10" fill="${color}"/>
-      <circle cx="20" cy="10" r="3.5" fill="rgba(255,255,255,0.45)"/>
-      <rect x="22" y="22" width="4" height="18" rx="2" fill="#b0b0b0"/>
-      <rect x="22.8" y="24" width="1.2" height="14" rx="0.6" fill="rgba(255,255,255,0.35)"/>
-      <polygon points="22,40 26,40 24,46" fill="#888"/>
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 48" width="32" height="48">
+      <circle cx="16" cy="10" r="9" fill="${color}"/>
+      <circle cx="13" cy="7" r="3" fill="rgba(255,255,255,0.45)"/>
+      <rect x="14.5" y="18" width="3" height="22" rx="1.5" fill="#b0b0b0"/>
+      <rect x="15.2" y="20" width="1" height="18" rx="0.5" fill="rgba(255,255,255,0.35)"/>
+      <polygon points="14.5,40 17.5,40 16,46" fill="#888"/>
     </svg>`;
     return `image://data:image/svg+xml,${encodeURIComponent(svg)}`;
   };
@@ -195,13 +195,13 @@ export default function MapContainer({
         symbol: createPushpinSVG('#1565c0'),
       }));
 
-    // 用户位置标记（绿色大头针）
+    // 用户位置标记（红色大头针，醒目）
     const userScatter = userLocation
       ? [{
           name: '我的位置',
           value: [userLocation.lng, userLocation.lat],
           title: locationName || '当前位置',
-          symbol: createPushpinSVG('#2e7d32'),
+          symbol: createPushpinSVG('#e53935'),
         }]
       : [];
 
@@ -211,8 +211,7 @@ export default function MapContainer({
           type: 'scatter',
           coordinateSystem: 'geo',
           data: [...scatterData, ...userScatter],
-          symbolSize: 32,
-          symbolRotate: -45,
+          symbolSize: 36,
           label: {
             show: true,
             formatter: (p: any) => p.data?.name || '',
