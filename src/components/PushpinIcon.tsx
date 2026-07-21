@@ -11,22 +11,21 @@ export default function PushpinIcon({ size = 28, color = '#1677ff', className, s
     <svg
       width={size}
       height={size}
-      viewBox="0 0 64 64"
+      viewBox="0 0 48 64"
       className={className}
       style={style}
-      fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* 圆头（塑料/金属球） */}
-      <circle cx="32" cy="16" r="14" fill={color} />
+      {/* 圆头（塑料球） */}
+      <circle cx="24" cy="14" r="12" fill={color} />
       {/* 圆头高光 */}
-      <circle cx="28" cy="12" r="5" fill="rgba(255,255,255,0.35)" />
+      <circle cx="20" cy="10" r="4" fill="rgba(255,255,255,0.4)" />
       {/* 金属针身 */}
-      <line x1="32" y1="28" x2="32" y2="56" stroke="#b0b0b0" strokeWidth="3" strokeLinecap="round" />
-      {/* 针尖 */}
-      <line x1="32" y1="54" x2="32" y2="60" stroke="#888" strokeWidth="2" strokeLinecap="round" />
+      <rect x="22" y="24" width="4" height="30" rx="2" fill="#b0b0b0" />
       {/* 针身反光 */}
-      <line x1="31" y1="30" x2="31" y2="52" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+      <rect x="23" y="26" width="1.5" height="26" rx="1" fill="rgba(255,255,255,0.3)" />
+      {/* 针尖 */}
+      <polygon points="22,54 26,54 24,62" fill="#888" />
     </svg>
   );
 }

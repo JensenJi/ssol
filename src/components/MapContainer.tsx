@@ -169,9 +169,17 @@ export default function MapContainer({
     init();
   }, []);
 
-  // 大头针 SVG 路径（圆头+针身）
-  const pushpinPath = 'M32,4 A14,14 0 1,1 32,32 A14,14 0 1,1 32,4 Z M30,30 L30,56 A2,2 0 0,0 34,56 L34,30 Z';
-  const pushpinSymbol = `path://${pushpinPath}`;
+  // 大头针 SVG 图片（圆头+针身+针尖）
+  const createPushpinSVG = (color: string) => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 64" width="48" height="64">
+      <circle cx="24" cy="14" r="12" fill="${color}"/>
+      <circle cx="20" cy="10" r="4" fill="rgba(255,255,255,0.4)"/>
+      <rect x="22" y="24" width="4" height="30" rx="2" fill="#b0b0b0"/>
+      <rect x="23" y="26" width="1.5" height="26" rx="1" fill="rgba(255,255,255,0.3)"/>
+      <polygon points="22,54 26,54 24,62" fill="#888"/>
+    </svg>`;
+    return `image://data:image/svg+xml,${encodeURIComponent(svg)}`;
+  };
 
   // 更新标记点
   const updateMarkers = useCallback(() => {
@@ -184,7 +192,7 @@ export default function MapContainer({
         name: doc.name,
         value: [doc.location_lng, doc.location_lat],
         title: `${doc.title || ''} | ${doc.hospital || ''}`,
-        itemStyle: { color: '#1565c0' },
+        symbol: createPushpinSVG('#1565c0'),
       }));
 
     // 用户位置标记（绿色大头针）
@@ -193,7 +201,7 @@ export default function MapContainer({
           name: '我的位置',
           value: [userLocation.lng, userLocation.lat],
           title: locationName || '当前位置',
-          itemStyle: { color: '#2e7d32' },
+          symbol: createPushpinSVG('#2e7d32'),
         }]
       : [];
 
@@ -203,8 +211,7 @@ export default function MapContainer({
           type: 'effectScatter',
           coordinateSystem: 'geo',
           data: [...scatterData, ...userScatter],
-          symbol: pushpinSymbol,
-          symbolSize: 20,
+          symbolSize: 24,
           symbolRotate: -45,
           showEffectOn: 'render',
           rippleEffect: { brushType: 'stroke', scale: 2.5 },
