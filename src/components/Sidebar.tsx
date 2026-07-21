@@ -25,32 +25,16 @@ export default function Sidebar({
   const newUsers = [...doctors].reverse().slice(0, 8);
   const merged = [...new Set([...allKeywords, ...extraKeywords])];
 
-  // 随机生成每个关键词的位置
-  const keywordPositions = merged.map((_kw, i) => {
-    const row = Math.floor(i / 4);
-    const col = i % 4;
-    return {
-      left: `${10 + col * 22 + Math.random() * 5}%`,
-      top: `${10 + row * 30 + Math.random() * 10}%`,
-      animationDelay: `${Math.random() * 8}s`,
-    };
-  });
-
   return (
     <div className="sidebar-panel">
-      {/* 信息库关键词 - 浮动效果 */}
+      {/* 信息库关键词 - 紧凑标签布局 */}
       <div className="panel-section keyword-section">
         <div className="panel-title"><KeyOutlined style={{ color: '#1677ff' }} /> 信息库关键词</div>
-        <div className="keyword-float-container">
-          {merged.map((kw, i) => (
+        <div className="keyword-tags-container">
+          {merged.map((kw) => (
             <span
               key={kw}
-              className="kw-float-tag"
-              style={{
-                left: keywordPositions[i].left,
-                top: keywordPositions[i].top,
-                animationDelay: keywordPositions[i].animationDelay,
-              }}
+              className="kw-tag"
               onClick={() => onKeywordClick(kw)}
             >
               {kw}
