@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Tag, Avatar, List, Typography } from 'antd';
 import {
   UserOutlined, ClockCircleOutlined,
@@ -26,38 +25,36 @@ export default function Sidebar({
   const newUsers = [...doctors].reverse().slice(0, 8);
   const merged = [...new Set([...allKeywords, ...extraKeywords])];
 
-  const [batchIndex, setBatchIndex] = useState(0);
-  const BATCH_SIZE = 8;
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setBatchIndex((prev) => (prev + 1) % Math.ceil(merged.length / BATCH_SIZE));
-    }, 2500);
-    return () => clearInterval(timer);
-  }, [merged.length]);
-
-  const startIdx = batchIndex * BATCH_SIZE;
-  const batchKeywords = merged.slice(startIdx, startIdx + BATCH_SIZE);
+  // 随机生成每个关键词的位置
+  const keywordPositions = merged.map((_kw, i) => {
+    const row = Math.floor(i / 4);
+    const col = i % 4;
+    return {
+      left: `${10 + col * 22 + Math.random() * 5}%`,
+      top: `${10 + row * 30 + Math.random() * 10}%`,
+      animationDelay: `${Math.random() * 8}s`,
+    };
+  });
 
   return (
     <div className="sidebar-panel">
-      {/* 信息库关键词 - 圆容器纯文字展示 */}
+      {/* 信息库关键词 - 浮动效果 */}
       <div className="panel-section keyword-section">
         <div className="panel-title"><KeyOutlined style={{ color: '#1677ff' }} /> 信息库关键词</div>
-        <div className="keyword-circle-container">
-          {batchKeywords.map((kw) => (
+        <div className="keyword-float-container">
+          {merged.map((kw, i) => (
             <span
               key={kw}
-              className="kw-circle-tag"
+              className="kw-float-tag"
+              style={{
+                left: keywordPositions[i].left,
+                top: keywordPositions[i].top,
+                animationDelay: keywordPositions[i].animationDelay,
+              }}
               onClick={() => onKeywordClick(kw)}
             >
               {kw}
             </span>
-          ))}
-        </div>
-        <div className="rotate-dots">
-          {Array.from({ length: Math.ceil(merged.length / BATCH_SIZE) }).map((_, i) => (
-            <span key={i} className={`dot ${i === batchIndex ? 'dot-active' : ''}`} />
           ))}
         </div>
       </div>
