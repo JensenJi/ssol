@@ -169,11 +169,15 @@ export default function MapContainer({
     init();
   }, []);
 
+  // 大头针 SVG 路径（圆头+针身）
+  const pushpinPath = 'M32,4 A14,14 0 1,1 32,32 A14,14 0 1,1 32,4 Z M30,30 L30,56 A2,2 0 0,0 34,56 L34,30 Z';
+  const pushpinSymbol = `path://${pushpinPath}`;
+
   // 更新标记点
   const updateMarkers = useCallback(() => {
     if (!chartRef.current || !mapReady) return;
 
-    // 搜索结果标记点（蓝色大头针效果）
+    // 搜索结果标记点（蓝色大头针）
     const scatterData = doctors
       .filter((doc) => doc && doc.location_lat && doc.location_lng)
       .map((doc) => ({
@@ -183,7 +187,7 @@ export default function MapContainer({
         itemStyle: { color: '#1565c0' },
       }));
 
-    // 用户位置标记（绿色）
+    // 用户位置标记（绿色大头针）
     const userScatter = userLocation
       ? [{
           name: '我的位置',
@@ -199,18 +203,19 @@ export default function MapContainer({
           type: 'effectScatter',
           coordinateSystem: 'geo',
           data: [...scatterData, ...userScatter],
-          symbolSize: 16,
+          symbol: pushpinSymbol,
+          symbolSize: 20,
           showEffectOn: 'render',
-          rippleEffect: { brushType: 'stroke', scale: 3 },
+          rippleEffect: { brushType: 'stroke', scale: 2.5 },
           label: {
             show: true,
             formatter: (p: any) => p.data?.name || '',
             position: 'right',
             fontSize: 11,
             color: '#333',
-            backgroundColor: 'rgba(255,255,255,0.7)',
-            padding: [2, 4],
-            borderRadius: 3,
+            backgroundColor: 'rgba(255,255,255,0.8)',
+            padding: [2, 6],
+            borderRadius: 4,
           },
           emphasis: {
             scale: true,

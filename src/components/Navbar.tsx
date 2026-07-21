@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Input, Button, Space, Modal, Select, Cascader } from 'antd';
-import { SearchOutlined, UserAddOutlined, AimOutlined, PushpinFilled } from '@ant-design/icons';
+import { SearchOutlined, UserAddOutlined, AimOutlined } from '@ant-design/icons';
+import PushpinIcon from './PushpinIcon';
 
 // 简化的省市区数据
 const locationData = [
@@ -118,7 +119,7 @@ export default function Navbar({ onSearch, onLocationSelect, onDistanceSelect, o
     <>
       <nav className="navbar">
         <div className="navbar-logo">
-          <PushpinFilled className="logo-icon" style={{ fontSize: 28, color: '#1677ff' }} />
+          <PushpinIcon size={32} color="#1677ff" className="logo-icon" />
           <span className="logo-text logo-drive-in">搜索在线</span>
           <span className="logo-slogan">搜索在线，你手上的大型人才库。</span>
         </div>
