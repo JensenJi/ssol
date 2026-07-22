@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ConfigProvider, message, Modal, Button } from 'antd';
 import { LoginOutlined, UpOutlined, TableOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
@@ -46,6 +46,8 @@ function App() {
   const [pendingUsers, setPendingUsers] = useState<Partial<Doctor>[]>([]);
   const [experts, setExperts] = useState<Doctor[]>(mockDoctors.filter(d => d.verified));
   const [tableExpanded, setTableExpanded] = useState(false);
+  const [tableHeight, setTableHeight] = useState(200);
+  const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
   // 从云开发加载认证专家数据
   useEffect(() => {
@@ -225,6 +227,29 @@ function App() {
   const handleMarkerClick = useCallback((doctor: Doctor) => { setSelectedDoctor(doctor); setProfileOpen(true); }, []);
   const handleKeywordClick = useCallback((keyword: string) => setSearchKeyword(keyword), []);
 
+  // 表格拖拽调整高度
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragRef.current = { startY: e.clientY, startHeight: tableHeight };
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!dragRef.current) return;
+      const delta = dragRef.current.startY - ev.clientY;
+      const newHeight = Math.max(100, Math.min(600, dragRef.current.startHeight + delta));
+      setTableHeight(newHeight);
+    };
+    const handleMouseUp = () => {
+      dragRef.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+  }, [tableHeight]);
+
   return (
     <ConfigProvider locale={zhCN}>
       {currentPage === 'register' && (
@@ -250,6 +275,7 @@ function App() {
               onMapClick={handleMapClick} onMarkerClick={handleMarkerClick} onLocationName={handleLocationName}
             />
             <div className="toggle-table-btn">
+              <div className="drag-handle" onMouseDown={handleDragStart} title="拖动调整列表高度" />
               <Button
                 type="text"
                 size="small"
@@ -259,7 +285,7 @@ function App() {
                 {tableExpanded ? '收起列表' : `展开全部列表 (${filteredDoctors.length}人)`}
               </Button>
             </div>
-            <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`}>
+            <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={tableExpanded ? { maxHeight: tableHeight } : {}}>
               <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
             </div>
           </div>

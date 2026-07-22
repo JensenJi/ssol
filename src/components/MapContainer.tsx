@@ -12,11 +12,11 @@ interface MapContainerProps {
   onLocationName?: (name: string) => void;
 }
 
-// 使用本地 GeoJSON 数据（已打包到项目中）
+// 使用本地 GeoJSON 数据（已打包到项目中，含市县边界）
 const GEO_URL = '/china.json';
 
-// 省份颜色映射（匹配参考图的淡蓝/淡绿色调）
-const provinceColors: Record<string, string> = {
+// 省级颜色映射（用于市级区域着色）
+const provinceColorMap: Record<string, string> = {
   '北京': '#d4e8f7', '天津': '#d4e8f7', '河北': '#c8e6c9', '山西': '#dcedc8',
   '内蒙古': '#b2dfdb', '辽宁': '#b3e5fc', '吉林': '#c5cae9', '黑龙江': '#d1c4e9',
   '上海': '#d4e8f7', '江苏': '#c8e6c9', '浙江': '#b2dfdb', '安徽': '#dcedc8',
@@ -27,6 +27,21 @@ const provinceColors: Record<string, string> = {
   '青海': '#d4e8f7', '宁夏': '#c8e6c9', '新疆': '#b2dfdb', '台湾': '#dcedc8',
   '香港': '#b3e5fc', '澳门': '#c5cae9',
 };
+
+// 从市级名称推断省份（通过 adcode 前两位）
+function getProvinceFromAdcode(adcode: number): string {
+  const prefix = Math.floor(adcode / 10000);
+  const map: Record<number, string> = {
+    11: '北京', 12: '天津', 13: '河北', 14: '山西', 15: '内蒙古',
+    21: '辽宁', 22: '吉林', 23: '黑龙江', 31: '上海', 32: '江苏',
+    33: '浙江', 34: '安徽', 35: '福建', 36: '江西', 37: '山东',
+    41: '河南', 42: '湖北', 43: '湖南', 44: '广东', 45: '广西',
+    46: '海南', 50: '重庆', 51: '四川', 52: '贵州', 53: '云南',
+    54: '西藏', 61: '陕西', 62: '甘肃', 63: '青海', 64: '宁夏',
+    65: '新疆', 71: '台湾', 81: '香港', 82: '澳门',
+  };
+  return map[prefix] || '';
+}
 
 export default function MapContainer({
   doctors, selectedDoctor, userLocation, locationName,
@@ -78,19 +93,22 @@ export default function MapContainer({
 
       echarts.registerMap('china', geoJson);
 
-      // 构建省份区域颜色
+      // 构建市县区域颜色（按省份分组着色）
       const regions = (geoJson.features || []).map((f: any) => {
         const name = f.properties?.name || '';
+        const adcode = f.properties?.adcode || 0;
+        const province = getProvinceFromAdcode(adcode);
+        const baseColor = provinceColorMap[province] || '#e8f0fe';
         return {
           name,
           itemStyle: {
-            areaColor: provinceColors[name] || '#e8f0fe',
-            borderColor: '#8ab4d6',
-            borderWidth: 0.8,
+            areaColor: baseColor,
+            borderColor: '#a0b8d0',
+            borderWidth: 0.5,
           },
           emphasis: {
             itemStyle: { areaColor: '#90caf9' },
-            label: { show: true, color: '#fff', fontWeight: 'bold', fontSize: 11 },
+            label: { show: true, color: '#fff', fontWeight: 'bold', fontSize: 10 },
           },
         };
       });
@@ -114,7 +132,7 @@ export default function MapContainer({
           roam: true,
           zoom: 1.15,
           center: [104, 36],
-          label: { show: true, fontSize: 9, color: '#5a7a96' },
+          label: { show: false, fontSize: 8, color: '#5a7a96' },
           emphasis: {
             label: { show: true, color: '#fff', fontWeight: 'bold' },
             itemStyle: { areaColor: '#90caf9' },
@@ -136,9 +154,12 @@ export default function MapContainer({
           const doc = doctors.find((d) => d.name === params.data.name);
           if (doc) onMarkerClick(doc);
         } else if (params.componentType === 'geo') {
-          // 点击了省份区域 → 设置位置
+          // 点击了市县区域 → 设置位置
+          const adcode = params.data?.adcode || 0;
+          const province = getProvinceFromAdcode(adcode);
+          const cityName = params.name || '';
           if (onLocationName) {
-            onLocationName(params.name || '');
+            onLocationName(province ? province + ' ' + cityName : cityName);
           }
           // 获取区域中心坐标
           const feature = (geoJson.features || []).find(

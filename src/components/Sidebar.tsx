@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { Tag, Avatar, List, Typography } from 'antd';
 import {
   UserOutlined, ClockCircleOutlined,
-  KeyOutlined,
+  KeyOutlined, DownOutlined, RightOutlined,
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
 
@@ -22,54 +23,33 @@ const extraKeywords = [
 export default function Sidebar({
   doctors, allKeywords, onKeywordClick, onDoctorClick,
 }: SidebarProps) {
-  const newUsers = [...doctors].reverse().slice(0, 8);
+  const [keywordOpen, setKeywordOpen] = useState(false);
   const merged = [...new Set([...allKeywords, ...extraKeywords])];
 
   return (
     <div className="sidebar-panel">
-      {/* 信息库关键词 - 紧凑标签布局 */}
+      {/* 信息库关键词 - 可折叠 */}
       <div className="panel-section keyword-section">
-        <div className="panel-title"><KeyOutlined style={{ color: '#1677ff' }} /> 信息库关键词</div>
-        <div className="keyword-tags-container">
-          {merged.map((kw) => (
-            <span
-              key={kw}
-              className="kw-tag"
-              onClick={() => onKeywordClick(kw)}
-            >
-              {kw}
-            </span>
-          ))}
+        <div className="panel-title keyword-toggle" onClick={() => setKeywordOpen(!keywordOpen)}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {keywordOpen ? <DownOutlined /> : <RightOutlined />}
+            <KeyOutlined style={{ color: '#1677ff' }} />
+            信息库关键词
+          </span>
         </div>
-      </div>
-
-      {/* 新增数据 - 独立容器 */}
-      <div className="panel-section new-users-section">
-        <div className="panel-title"><ClockCircleOutlined style={{ color: '#52c41a' }} /> 新增数据</div>
-        <List
-          size="small" dataSource={newUsers}
-          renderItem={(user, index) => (
-            <List.Item className="expert-item" onClick={() => onDoctorClick(user)}>
-              <List.Item.Meta
-                avatar={<Avatar style={{ backgroundColor: '#1677ff' }} icon={<UserOutlined />} size={32} />}
-                title={
-                  <div className="expert-info">
-                    <Text strong style={{ fontSize: 12 }}>#{doctors.length - index}</Text>{' '}
-                    <span style={{ fontSize: 12 }}>{user.name}</span>
-                  </div>
-                }
-                description={
-                  <div className="expert-desc">
-                    <span>{user.province} {user.city}</span>
-                    <span className="expert-keywords">
-                      {user.keywords.slice(0, 2).map((k) => <Tag key={k} style={{ fontSize: 10, margin: '0 2px' }}>{k}</Tag>)}
-                    </span>
-                  </div>
-                }
-              />
-            </List.Item>
-          )}
-        />
+        {keywordOpen && (
+          <div className="keyword-tags-container">
+            {merged.map((kw) => (
+              <span
+                key={kw}
+                className="kw-tag"
+                onClick={() => onKeywordClick(kw)}
+              >
+                {kw}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

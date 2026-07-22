@@ -126,7 +126,7 @@ export default function Navbar({ onSearch, onLocationSelect, onDistanceSelect, o
         <div className="navbar-search">
           <Input
             size="large"
-            placeholder="搜索：骨科、心脏病、英语、编程..."
+            placeholder="你喜欢什么搜一下？"
             prefix={<SearchOutlined />}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
