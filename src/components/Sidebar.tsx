@@ -1,12 +1,8 @@
-import { useState } from 'react';
-import { Tag, Avatar, List, Typography } from 'antd';
+import { Tag } from 'antd';
 import {
-  UserOutlined, ClockCircleOutlined,
-  KeyOutlined, DownOutlined, RightOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
-
-const { Text } = Typography;
 
 interface SidebarProps {
   doctors: Doctor[];
@@ -24,41 +20,29 @@ const extraKeywords = [
 export default function Sidebar({
   doctors, allKeywords, onKeywordClick, onDoctorClick, onToggleSidebar,
 }: SidebarProps) {
-  const [keywordOpen, setKeywordOpen] = useState(false);
   const merged = [...new Set([...allKeywords, ...extraKeywords])];
-
-  const handleToggle = () => {
-    setKeywordOpen(!keywordOpen);
-    // 折叠时隐藏整个右侧面板
-    if (keywordOpen && onToggleSidebar) {
-      onToggleSidebar();
-    }
-  };
 
   return (
     <div className="sidebar-panel">
-      {/* 信息库关键词 - 可折叠 */}
+      {/* 信息库关键词 - 默认展开，点击标题隐藏整个侧栏 */}
       <div className="panel-section keyword-section">
-        <div className="panel-title keyword-toggle" onClick={handleToggle}>
+        <div className="panel-title keyword-toggle" onClick={onToggleSidebar} title="点击隐藏右侧栏">
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {keywordOpen ? <DownOutlined /> : <RightOutlined />}
             <KeyOutlined style={{ color: '#1677ff' }} />
             信息库关键词
           </span>
         </div>
-        {keywordOpen && (
-          <div className="keyword-tags-container">
-            {merged.map((kw) => (
-              <span
-                key={kw}
-                className="kw-tag"
-                onClick={() => onKeywordClick(kw)}
-              >
-                {kw}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="keyword-tags-container">
+          {merged.map((kw) => (
+            <span
+              key={kw}
+              className="kw-tag"
+              onClick={() => onKeywordClick(kw)}
+            >
+              {kw}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );

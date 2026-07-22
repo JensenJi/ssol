@@ -157,9 +157,12 @@ function App() {
   }, [favTarget]);
 
   const allKeywords = useMemo(() => {
-    const set = new Set<string>();
-    experts.forEach((d) => d.keywords.forEach((k) => set.add(k)));
-    return Array.from(set);
+    const freqMap = new Map<string, number>();
+    experts.forEach((d) => d.keywords.forEach((k) => freqMap.set(k, (freqMap.get(k) || 0) + 1)));
+    // 按频率降序排序
+    return Array.from(freqMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([kw]) => kw);
   }, [experts]);
 
   // 搜索结果：先匹配关键词，再按距离排序
@@ -291,7 +294,7 @@ function App() {
                 {tableExpanded ? '收起列表' : `展开全部列表 (${filteredDoctors.length}人)`}
               </Button>
             </div>
-            <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'} ${sidebarVisible ? '' : 'overlay'}`} style={tableExpanded ? { maxHeight: tableHeight } : {}}>
+            <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={tableExpanded ? { maxHeight: tableHeight } : {}}>
               <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
             </div>
           </div>

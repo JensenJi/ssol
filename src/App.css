@@ -102,8 +102,7 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
 /* 结果表格 */
 .result-table { overflow-y: auto; background: #fff; padding: 0 12px 12px; min-height: 100px; position: relative; z-index: 1; }
 .result-table.collapsed { max-height: 0 !important; padding: 0 12px; overflow: hidden; opacity: 0; }
-.result-table.expanded { opacity: 1; overflow-y: auto; position: absolute; left: 0; right: 0; bottom: 34px; z-index: 20; box-shadow: 0 -2px 12px rgba(0,0,0,0.1); border-radius: 8px 8px 0 0; }
-.result-table.overlay { position: absolute; left: 0; right: 0; bottom: 34px; z-index: 20; box-shadow: 0 -2px 12px rgba(0,0,0,0.1); border-radius: 8px 8px 0 0; }
+.result-table.expanded { opacity: 1; overflow-y: auto; position: absolute; left: 0; right: 0; bottom: 34px; z-index: 20; box-shadow: 0 -2px 12px rgba(0,0,0,0.15); border-radius: 8px 8px 0 0; }
 .toggle-table-btn { display: flex; flex-direction: column; align-items: center; padding: 0; background: #fff; flex-shrink: 0; position: relative; z-index: 21; }
 .toggle-table-btn .ant-btn { border-radius: 0; }
 .result-table .ant-table-row:hover { background: #e6f4ff !important; }
