@@ -47,7 +47,7 @@ function App() {
   const [experts, setExperts] = useState<Doctor[]>(mockDoctors.filter(d => d.verified));
   const [tableExpanded, setTableExpanded] = useState(false);
   const [tableHeight, setTableHeight] = useState(200);
-  const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
   // 从云开发加载认证专家数据
@@ -283,23 +283,6 @@ function App() {
               locationName={locationName}
               onMapClick={handleMapClick} onMarkerClick={handleMarkerClick} onLocationName={handleLocationName}
             />
-          </div>
-          {sidebarVisible && (
-            <div className="content-right">
-              <Sidebar
-                doctors={experts} allKeywords={allKeywords}
-                onKeywordClick={handleKeywordClick} onDoctorClick={handleMarkerClick}
-                onToggleSidebar={() => setSidebarVisible(false)}
-              />
-            </div>
-          )}
-          {!sidebarVisible && (
-            <div className="show-sidebar-btn" onClick={() => setSidebarVisible(true)} title="显示右侧栏">
-              <RightOutlined />
-            </div>
-          )}
-          {/* 表格和拖拽手柄放在 main-content 层级，确保覆盖侧栏 */}
-          <div className="table-overlay-area">
             <div className="toggle-table-btn">
               <div className="drag-handle" onMouseDown={handleDragStart} title="向上拖动展开列表" />
               <Button
@@ -315,6 +298,21 @@ function App() {
               <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
             </div>
           </div>
+          {sidebarVisible && (
+            <div className="content-right">
+              <Sidebar
+                allKeywords={allKeywords}
+                onKeywordClick={handleKeywordClick}
+                onDoctorClick={handleMarkerClick}
+                onToggleSidebar={() => setSidebarVisible(false)}
+              />
+            </div>
+          )}
+          {!sidebarVisible && (
+            <div className="show-sidebar-btn" onClick={() => setSidebarVisible(true)} title="显示关键词侧栏">
+              <RightOutlined />
+            </div>
+          )}
         </div>
         <UserProfile
           user={selectedDoctor} open={profileOpen} onClose={() => setProfileOpen(false)}

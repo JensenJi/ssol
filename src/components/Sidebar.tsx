@@ -1,8 +1,4 @@
-import { useState } from 'react';
 import { Tag } from 'antd';
-import {
-  KeyOutlined, RightOutlined, DownOutlined,
-} from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
 
 interface SidebarProps {
@@ -19,35 +15,23 @@ const extraKeywords = [
 ];
 
 export default function Sidebar({
-  doctors, allKeywords, onKeywordClick, onDoctorClick, onToggleSidebar,
+  allKeywords, onKeywordClick, onToggleSidebar,
 }: SidebarProps) {
-  const [keywordOpen, setKeywordOpen] = useState(false);
   const merged = [...new Set([...allKeywords, ...extraKeywords])];
 
   return (
     <div className="sidebar-panel">
-      {/* 信息库关键词 - 默认隐藏，开关控制 */}
-      <div className="panel-section keyword-section">
-        <div className="panel-title keyword-toggle" onClick={() => setKeywordOpen(!keywordOpen)}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {keywordOpen ? <DownOutlined /> : <RightOutlined />}
-            <KeyOutlined style={{ color: '#1677ff' }} />
-            信息库关键词
+      <div className="sidebar-close-btn" onClick={onToggleSidebar} title="关闭侧栏">✕</div>
+      <div className="keyword-tags-container">
+        {merged.map((kw) => (
+          <span
+            key={kw}
+            className="kw-tag"
+            onClick={() => onKeywordClick(kw)}
+          >
+            {kw}
           </span>
-        </div>
-        {keywordOpen && (
-          <div className="keyword-tags-container">
-            {merged.map((kw) => (
-              <span
-                key={kw}
-                className="kw-tag"
-                onClick={() => onKeywordClick(kw)}
-              >
-                {kw}
-              </span>
-            ))}
-          </div>
-        )}
+        ))}
       </div>
     </div>
   );

@@ -40,19 +40,6 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
 .content-left.full-width { flex: 1 1 100%; }
 .content-right { width: 320px; flex-shrink: 0; background: #fff; border-left: 1px solid #e8e8e8; display: flex; flex-direction: column; overflow-y: auto; transition: all 0.3s; position: relative; z-index: 5; }
 
-/* 表格覆盖区域 - 在main-content层级，始终覆盖侧栏 */
-.table-overlay-area {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 30;
-  pointer-events: none;
-}
-.table-overlay-area > * {
-  pointer-events: auto;
-}
-
 /* 显示侧栏按钮 */
 .show-sidebar-btn {
   position: absolute;
