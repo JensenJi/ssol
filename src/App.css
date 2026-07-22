@@ -36,9 +36,22 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
 
 /* 主内容 */
 .main-content { flex: 1; display: flex; overflow: hidden; position: relative; }
-.content-left { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; transition: all 0.3s; position: relative; }
+.content-left { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; transition: all 0.3s; }
 .content-left.full-width { flex: 1 1 100%; }
 .content-right { width: 320px; flex-shrink: 0; background: #fff; border-left: 1px solid #e8e8e8; display: flex; flex-direction: column; overflow-y: auto; transition: all 0.3s; position: relative; z-index: 5; }
+
+/* 表格覆盖区域 - 在main-content层级，始终覆盖侧栏 */
+.table-overlay-area {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+.table-overlay-area > * {
+  pointer-events: auto;
+}
 
 /* 显示侧栏按钮 */
 .show-sidebar-btn {
@@ -100,10 +113,10 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
 }
 
 /* 结果表格 */
-.result-table { overflow-y: auto; background: #fff; padding: 0 12px 12px; min-height: 100px; position: relative; z-index: 1; }
+.result-table { overflow-y: auto; background: #fff; padding: 0 12px 12px; min-height: 100px; }
 .result-table.collapsed { max-height: 0 !important; padding: 0 12px; overflow: hidden; opacity: 0; }
-.result-table.expanded { opacity: 1; overflow-y: auto; position: absolute; left: 0; right: 0; bottom: 34px; z-index: 20; box-shadow: 0 -2px 12px rgba(0,0,0,0.15); border-radius: 8px 8px 0 0; }
-.toggle-table-btn { display: flex; flex-direction: column; align-items: center; padding: 0; background: #fff; flex-shrink: 0; position: relative; z-index: 21; }
+.result-table.expanded { opacity: 1; overflow-y: auto; box-shadow: 0 -2px 12px rgba(0,0,0,0.15); border-radius: 8px 8px 0 0; }
+.toggle-table-btn { display: flex; flex-direction: column; align-items: center; padding: 0; background: #fff; }
 .toggle-table-btn .ant-btn { border-radius: 0; }
 .result-table .ant-table-row:hover { background: #e6f4ff !important; }
 

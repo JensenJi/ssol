@@ -283,20 +283,6 @@ function App() {
               locationName={locationName}
               onMapClick={handleMapClick} onMarkerClick={handleMarkerClick} onLocationName={handleLocationName}
             />
-            <div className="toggle-table-btn">
-              <div className="drag-handle" onMouseDown={handleDragStart} title="向上拖动展开列表" />
-              <Button
-                type="text"
-                size="small"
-                icon={tableExpanded ? <UpOutlined /> : <TableOutlined />}
-                onClick={() => setTableExpanded(!tableExpanded)}
-              >
-                {tableExpanded ? '收起列表' : `展开全部列表 (${filteredDoctors.length}人)`}
-              </Button>
-            </div>
-            <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={tableExpanded ? { maxHeight: tableHeight } : {}}>
-              <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
-            </div>
           </div>
           {sidebarVisible && (
             <div className="content-right">
@@ -312,6 +298,23 @@ function App() {
               <RightOutlined />
             </div>
           )}
+          {/* 表格和拖拽手柄放在 main-content 层级，确保覆盖侧栏 */}
+          <div className="table-overlay-area">
+            <div className="toggle-table-btn">
+              <div className="drag-handle" onMouseDown={handleDragStart} title="向上拖动展开列表" />
+              <Button
+                type="text"
+                size="small"
+                icon={tableExpanded ? <UpOutlined /> : <TableOutlined />}
+                onClick={() => setTableExpanded(!tableExpanded)}
+              >
+                {tableExpanded ? '收起列表' : `展开全部列表 (${filteredDoctors.length}人)`}
+              </Button>
+            </div>
+            <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={tableExpanded ? { maxHeight: tableHeight } : {}}>
+              <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
+            </div>
+          </div>
         </div>
         <UserProfile
           user={selectedDoctor} open={profileOpen} onClose={() => setProfileOpen(false)}
