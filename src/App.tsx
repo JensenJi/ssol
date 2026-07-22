@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ConfigProvider, message, Modal, Button } from 'antd';
-import { LoginOutlined, UpOutlined, TableOutlined } from '@ant-design/icons';
+import { LoginOutlined, UpOutlined, TableOutlined, RightOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
 import Navbar from './components/Navbar';
 import MapContainer from './components/MapContainer';
@@ -47,6 +47,7 @@ function App() {
   const [experts, setExperts] = useState<Doctor[]>(mockDoctors.filter(d => d.verified));
   const [tableExpanded, setTableExpanded] = useState(false);
   const [tableHeight, setTableHeight] = useState(200);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
   // 从云开发加载认证专家数据
@@ -230,12 +231,17 @@ function App() {
   // 表格拖拽调整高度
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    dragRef.current = { startY: e.clientY, startHeight: tableHeight };
+    e.stopPropagation();
+    const startH = tableExpanded ? tableHeight : 0;
+    dragRef.current = { startY: e.clientY, startHeight: startH };
     const handleMouseMove = (ev: MouseEvent) => {
       if (!dragRef.current) return;
       const delta = dragRef.current.startY - ev.clientY;
       const newHeight = Math.max(100, Math.min(600, dragRef.current.startHeight + delta));
       setTableHeight(newHeight);
+      if (!tableExpanded && newHeight > 50) {
+        setTableExpanded(true);
+      }
     };
     const handleMouseUp = () => {
       dragRef.current = null;
@@ -248,7 +254,7 @@ function App() {
     document.addEventListener('mouseup', handleMouseUp);
     document.body.style.cursor = 'ns-resize';
     document.body.style.userSelect = 'none';
-  }, [tableHeight]);
+  }, [tableHeight, tableExpanded]);
 
   return (
     <ConfigProvider locale={zhCN}>
@@ -268,14 +274,14 @@ function App() {
             onGoRegister={() => setCurrentPage('register')}
           />
         <div className="main-content">
-          <div className="content-left">
+          <div className={`content-left ${sidebarVisible ? '' : 'full-width'}`}>
             <MapContainer
               doctors={filteredDoctors} selectedDoctor={selectedDoctor} userLocation={userLocation}
               locationName={locationName}
               onMapClick={handleMapClick} onMarkerClick={handleMarkerClick} onLocationName={handleLocationName}
             />
             <div className="toggle-table-btn">
-              <div className="drag-handle" onMouseDown={handleDragStart} title="拖动调整列表高度" />
+              <div className="drag-handle" onMouseDown={handleDragStart} title="向上拖动展开列表" />
               <Button
                 type="text"
                 size="small"
@@ -285,16 +291,24 @@ function App() {
                 {tableExpanded ? '收起列表' : `展开全部列表 (${filteredDoctors.length}人)`}
               </Button>
             </div>
-            <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={tableExpanded ? { maxHeight: tableHeight } : {}}>
+            <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'} ${sidebarVisible ? '' : 'overlay'}`} style={tableExpanded ? { maxHeight: tableHeight } : {}}>
               <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
             </div>
           </div>
-          <div className="content-right">
-            <Sidebar
-              doctors={experts} allKeywords={allKeywords}
-              onKeywordClick={handleKeywordClick} onDoctorClick={handleMarkerClick}
-            />
-          </div>
+          {sidebarVisible && (
+            <div className="content-right">
+              <Sidebar
+                doctors={experts} allKeywords={allKeywords}
+                onKeywordClick={handleKeywordClick} onDoctorClick={handleMarkerClick}
+                onToggleSidebar={() => setSidebarVisible(false)}
+              />
+            </div>
+          )}
+          {!sidebarVisible && (
+            <div className="show-sidebar-btn" onClick={() => setSidebarVisible(true)} title="显示右侧栏">
+              <RightOutlined />
+            </div>
+          )}
         </div>
         <UserProfile
           user={selectedDoctor} open={profileOpen} onClose={() => setProfileOpen(false)}

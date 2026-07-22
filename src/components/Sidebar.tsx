@@ -13,6 +13,7 @@ interface SidebarProps {
   allKeywords: string[];
   onKeywordClick: (keyword: string) => void;
   onDoctorClick: (doctor: Doctor) => void;
+  onToggleSidebar?: () => void;
 }
 
 const extraKeywords = [
@@ -21,16 +22,24 @@ const extraKeywords = [
 ];
 
 export default function Sidebar({
-  doctors, allKeywords, onKeywordClick, onDoctorClick,
+  doctors, allKeywords, onKeywordClick, onDoctorClick, onToggleSidebar,
 }: SidebarProps) {
   const [keywordOpen, setKeywordOpen] = useState(false);
   const merged = [...new Set([...allKeywords, ...extraKeywords])];
+
+  const handleToggle = () => {
+    setKeywordOpen(!keywordOpen);
+    // 折叠时隐藏整个右侧面板
+    if (keywordOpen && onToggleSidebar) {
+      onToggleSidebar();
+    }
+  };
 
   return (
     <div className="sidebar-panel">
       {/* 信息库关键词 - 可折叠 */}
       <div className="panel-section keyword-section">
-        <div className="panel-title keyword-toggle" onClick={() => setKeywordOpen(!keywordOpen)}>
+        <div className="panel-title keyword-toggle" onClick={handleToggle}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {keywordOpen ? <DownOutlined /> : <RightOutlined />}
             <KeyOutlined style={{ color: '#1677ff' }} />
