@@ -84,11 +84,9 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
           </div>
           <div className="navbar-actions">
             <Space>
+              <Button type="link" icon={<HomeOutlined />} onClick={onGoHome}>首页</Button>
               {isLoggedIn ? (
-                <>
-                  <Button type="link" icon={<HomeOutlined />} onClick={onGoHome}>首页</Button>
-                  <Button type="link" icon={<LockOutlined />} onClick={onGoAdmin}>管理后台</Button>
-                </>
+                <Button type="link" icon={<LockOutlined />} onClick={onGoAdmin}>管理后台</Button>
               ) : (
                 <Button type="primary" icon={<UserAddOutlined />} shape="round" onClick={onGoRegister}>注册/登录</Button>
               )}

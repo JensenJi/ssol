@@ -396,41 +396,26 @@ export default function ResumeEditor() {
             {resume.links.map((link, idx) => (
               <div key={idx} className="resume-detail-item">
                 <LinkOutlined style={{ color: '#1677ff', marginRight: 8, flexShrink: 0 }} />
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    <Input
-                      value={link.label}
-                      onChange={(e) => {
-                        const updated = resume.links.map((item, i) =>
-                          i === idx ? { ...item, label: e.target.value } : item
-                        );
-                        updateField('links', updated);
-                      }}
-                      className="resume-input"
-                      style={{ fontSize: 12, fontWeight: 600, flex: 1 }}
-                      placeholder="链接名称"
-                    />
-                    <Button
-                      size="small"
-                      type="text"
-                      danger
-                      onClick={() => removeLink(idx)}
-                      icon={<DeleteOutlined />}
-                      style={{ fontSize: 12, flexShrink: 0 }}
-                    />
-                  </div>
-                  <Input
-                    value={link.url}
-                    onChange={(e) => {
-                      const updated = resume.links.map((item, i) =>
-                        i === idx ? { ...item, url: e.target.value } : item
-                      );
-                      updateField('links', updated);
-                    }}
-                    className="resume-input"
-                    placeholder="点这里填写链接地址"
-                  />
-                </div>
+                <Input
+                  value={link.url}
+                  onChange={(e) => {
+                    const updated = resume.links.map((item, i) =>
+                      i === idx ? { ...item, url: e.target.value } : item
+                    );
+                    updateField('links', updated);
+                  }}
+                  className="resume-input"
+                  placeholder="点这里填写链接地址"
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  size="small"
+                  type="text"
+                  danger
+                  onClick={() => removeLink(idx)}
+                  icon={<DeleteOutlined />}
+                  style={{ fontSize: 12, flexShrink: 0, marginLeft: 4 }}
+                />
               </div>
             ))}
           </section>
@@ -449,47 +434,26 @@ export default function ResumeEditor() {
               </Button>
             </div>
             {resume.skills.map((skill, idx) => (
-              <div key={idx} className="resume-skill-item">
-                <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 4 }}>
-                  <Input
-                    value={skill.name}
-                    onChange={(e) => {
-                      const updated = resume.skills.map((item, i) =>
-                        i === idx ? { ...item, name: e.target.value } : item
-                      );
-                      updateField('skills', updated);
-                    }}
-                    className="resume-input"
-                    style={{ fontSize: 13, flex: 1 }}
-                    placeholder="点这里填写技能名称"
-                  />
-                  <Button
-                    size="small"
-                    type="text"
-                    danger
-                    onClick={() => removeSkill(idx)}
-                    icon={<DeleteOutlined />}
-                    style={{ fontSize: 12, flexShrink: 0 }}
-                  />
-                </div>
-                <div className="resume-skill-bar">
-                  <div
-                    className="resume-skill-fill"
-                    style={{ width: `${skill.level}%` }}
-                  />
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={skill.level}
+              <div key={idx} className="resume-detail-item">
+                <Input
+                  value={skill.name}
                   onChange={(e) => {
                     const updated = resume.skills.map((item, i) =>
-                      i === idx ? { ...item, level: Number(e.target.value) } : item
+                      i === idx ? { ...item, name: e.target.value } : item
                     );
                     updateField('skills', updated);
                   }}
-                  style={{ width: '100%', marginTop: 4 }}
+                  className="resume-input"
+                  style={{ fontSize: 13, flex: 1 }}
+                  placeholder="点这里添加技能"
+                />
+                <Button
+                  size="small"
+                  type="text"
+                  danger
+                  onClick={() => removeSkill(idx)}
+                  icon={<DeleteOutlined />}
+                  style={{ fontSize: 12, flexShrink: 0, marginLeft: 4 }}
                 />
               </div>
             ))}

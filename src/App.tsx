@@ -234,6 +234,9 @@ function App() {
 
   const handleMarkerClick = useCallback((doctor: Doctor) => { setSelectedDoctor(doctor); setProfileOpen(true); }, []);
   const handleKeywordClick = useCallback((keyword: string) => {
+    // 先关闭个人主页弹窗，避免遮挡搜索结果
+    setProfileOpen(false);
+    setSelectedDoctor(null);
     setSearchKeyword(keyword);
     setTableExpanded(true);
   }, []);
