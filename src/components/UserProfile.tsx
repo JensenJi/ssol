@@ -5,9 +5,12 @@ import {
 import {
   UserOutlined, EnvironmentOutlined, SafetyCertificateOutlined,
   EditOutlined, PhoneOutlined, HeartOutlined, HeartFilled,
+  FileTextOutlined, PictureOutlined,
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
 import { getStarLevel as calcStarLevel } from '../data/mockData';
+import ResumeEditor from './ResumeEditor';
+import PhotoAlbum from './PhotoAlbum';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -36,7 +39,7 @@ const mockArticles: Record<string, { id: string; title: string; date: string; vi
 };
 
 export default function UserProfile({ user, open, onClose, isFavorited, onFavorite }: UserProfileProps) {
-  const [tab, setTab] = useState<'info' | 'articles'>('info');
+  const [tab, setTab] = useState<'info' | 'articles' | 'resume' | 'photos'>('info');
   if (!user) return null;
 
   const starInfo = calcStarLevel(user.likes || 0);
@@ -45,7 +48,7 @@ export default function UserProfile({ user, open, onClose, isFavorited, onFavori
   ];
 
   return (
-    <Modal open={open} onCancel={onClose} footer={null} width={640} title={null} closable>
+    <Modal open={open} onCancel={onClose} footer={null} width={800} title={null} closable>
       <div className="profile-modal">
         <div className="profile-header">
           <Avatar size={72} style={{ backgroundColor: '#1677ff' }} icon={<UserOutlined />} />
@@ -95,8 +98,10 @@ export default function UserProfile({ user, open, onClose, isFavorited, onFavori
         <Divider style={{ margin: '12px 0' }} />
 
         <div className="profile-tabs">
-          <Button type={tab === 'info' ? 'primary' : 'default'} size="small" onClick={() => setTab('info')}>个人信息</Button>
-          <Button type={tab === 'articles' ? 'primary' : 'default'} size="small" onClick={() => setTab('articles')}>发布的文章</Button>
+          <Button type={tab === 'info' ? 'primary' : 'default'} size="small" icon={<UserOutlined />} onClick={() => setTab('info')}>个人信息</Button>
+          <Button type={tab === 'articles' ? 'primary' : 'default'} size="small" icon={<EditOutlined />} onClick={() => setTab('articles')}>发布的文章</Button>
+          <Button type={tab === 'resume' ? 'primary' : 'default'} size="small" icon={<FileTextOutlined />} onClick={() => setTab('resume')}>我的简历</Button>
+          <Button type={tab === 'photos' ? 'primary' : 'default'} size="small" icon={<PictureOutlined />} onClick={() => setTab('photos')}>我的照片</Button>
         </div>
 
         <div className="profile-content">
@@ -123,6 +128,8 @@ export default function UserProfile({ user, open, onClose, isFavorited, onFavori
               ))}
             </div>
           )}
+          {tab === 'resume' && <ResumeEditor />}
+          {tab === 'photos' && <PhotoAlbum />}
         </div>
       </div>
     </Modal>

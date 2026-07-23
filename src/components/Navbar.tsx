@@ -1,75 +1,7 @@
 import { useState } from 'react';
-import { Input, Button, Space, Modal, Select, Cascader } from 'antd';
-import { SearchOutlined, UserAddOutlined, AimOutlined } from '@ant-design/icons';
+import { Input, Button, Space, Modal, Select } from 'antd';
+import { SearchOutlined, UserAddOutlined, AimOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import PushpinIcon from './PushpinIcon';
-
-// 简化的省市区数据
-const locationData = [
-  {
-    value: '北京', label: '北京',
-    children: [{ value: '北京', label: '北京', children: [{ value: '东城区', label: '东城区' }, { value: '西城区', label: '西城区' }, { value: '朝阳区', label: '朝阳区' }, { value: '海淀区', label: '海淀区' }] }],
-  },
-  {
-    value: '上海', label: '上海',
-    children: [{ value: '上海', label: '上海', children: [{ value: '黄浦区', label: '黄浦区' }, { value: '浦东新区', label: '浦东新区' }] }],
-  },
-  {
-    value: '山东', label: '山东',
-    children: [
-      { value: '济南', label: '济南', children: [{ value: '历下区', label: '历下区' }, { value: '市中区', label: '市中区' }] },
-      { value: '济宁', label: '济宁', children: [{ value: '汶上县', label: '汶上县' }, { value: '曲阜市', label: '曲阜市' }] },
-      { value: '青岛', label: '青岛', children: [{ value: '市南区', label: '市南区' }] },
-    ],
-  },
-  {
-    value: '广东', label: '广东',
-    children: [{ value: '广州', label: '广州', children: [{ value: '天河区', label: '天河区' }] }, { value: '深圳', label: '深圳', children: [{ value: '南山区', label: '南山区' }] }],
-  },
-  {
-    value: '浙江', label: '浙江',
-    children: [{ value: '杭州', label: '杭州', children: [{ value: '西湖区', label: '西湖区' }] }],
-  },
-  {
-    value: '江苏', label: '江苏',
-    children: [{ value: '南京', label: '南京', children: [{ value: '玄武区', label: '玄武区' }] }, { value: '扬州', label: '扬州', children: [{ value: '广陵区', label: '广陵区' }] }],
-  },
-  {
-    value: '湖北', label: '湖北',
-    children: [{ value: '武汉', label: '武汉', children: [{ value: '武昌区', label: '武昌区' }] }],
-  },
-  {
-    value: '四川', label: '四川',
-    children: [{ value: '成都', label: '成都', children: [{ value: '锦江区', label: '锦江区' }] }],
-  },
-  {
-    value: '新疆', label: '新疆',
-    children: [{ value: '乌鲁木齐', label: '乌鲁木齐', children: [{ value: '天山区', label: '天山区' }] }, { value: '和田', label: '和田', children: [{ value: '和田市', label: '和田市' }] }],
-  },
-  {
-    value: '贵州', label: '贵州',
-    children: [{ value: '贵阳', label: '贵阳', children: [{ value: '南明区', label: '南明区' }] }],
-  },
-  {
-    value: '广西', label: '广西',
-    children: [{ value: '南宁', label: '南宁', children: [{ value: '青秀区', label: '青秀区' }] }],
-  },
-  {
-    value: '甘肃', label: '甘肃',
-    children: [{ value: '兰州', label: '兰州', children: [{ value: '城关区', label: '城关区' }] }],
-  },
-  {
-    value: '江西', label: '江西',
-    children: [{ value: '景德镇', label: '景德镇', children: [{ value: '珠山区', label: '珠山区' }] }],
-  },
-  {
-    value: '云南', label: '云南',
-    children: [{ value: '昆明', label: '昆明', children: [{ value: '五华区', label: '五华区' }] }],
-  },
-  {
-    value: '海南', label: '海南',
-    children: [{ value: '海口', label: '海口', children: [{ value: '龙华区', label: '龙华区' }] }],
-  },
-];
 
 const distanceData = [
   { label: '5公里', value: 5 },
@@ -82,17 +14,21 @@ const distanceData = [
 
 interface NavbarProps {
   onSearch: (keyword: string) => void;
-  onLocationSelect?: (location: string) => void;
+  onLocationUpdate?: (location: { lat: number; lng: number; name: string }) => void;
   onDistanceSelect?: (distance: number) => void;
   onGoRegister?: () => void;
+  ipLocation?: { name: string; lat: number; lng: number } | null;
 }
 
-export default function Navbar({ onSearch, onLocationSelect, onDistanceSelect, onGoRegister }: NavbarProps) {
+export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, ipLocation }: NavbarProps) {
   const [keyword, setKeyword] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogLocation, setDialogLocation] = useState<string[]>([]);
   const [dialogKeyword, setDialogKeyword] = useState('');
   const [dialogDistance, setDialogDistance] = useState(99999);
+  // 手动更正位置
+  const [manualProvince, setManualProvince] = useState('');
+  const [manualCity, setManualCity] = useState('');
+  const [manualDistrict, setManualDistrict] = useState('');
 
   const handleSearchClick = () => {
     setDialogOpen(true);
@@ -102,8 +38,10 @@ export default function Navbar({ onSearch, onLocationSelect, onDistanceSelect, o
   const handleDialogConfirm = () => {
     setKeyword(dialogKeyword);
     onSearch(dialogKeyword);
-    if (onLocationSelect && dialogLocation.length > 0) {
-      onLocationSelect(dialogLocation.join(' '));
+    // 如果手动填写了位置，使用手动位置
+    if (manualProvince && onLocationUpdate) {
+      const name = [manualProvince, manualCity, manualDistrict].filter(Boolean).join(' ');
+      onLocationUpdate({ lat: 0, lng: 0, name });
     }
     if (onDistanceSelect) {
       onDistanceSelect(dialogDistance);
@@ -157,14 +95,43 @@ export default function Navbar({ onSearch, onLocationSelect, onDistanceSelect, o
         width={480}
       >
         <div style={{ padding: '8px 0' }}>
+          {/* IP自动定位显示 */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>我的位置</div>
-            <Cascader
-              options={locationData}
-              value={dialogLocation}
-              onChange={(val) => setDialogLocation(val as string[])}
-              placeholder="选择省 / 市 / 县"
-              style={{ width: '100%' }}
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>
+              <EnvironmentOutlined style={{ color: '#1677ff', marginRight: 4 }} />
+              我的位置
+              {ipLocation && <span style={{ fontWeight: 400, color: '#52c41a', marginLeft: 8, fontSize: 12 }}>● 已自动定位</span>}
+            </div>
+            {ipLocation ? (
+              <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6, padding: '10px 14px', fontSize: 14 }}>
+                {ipLocation.name}
+              </div>
+            ) : (
+              <div style={{ color: '#999', fontSize: 13 }}>正在获取位置...</div>
+            )}
+            <div style={{ fontSize: 12, color: '#999', marginTop: 6 }}>位置不准确？请在下方手动更正</div>
+          </div>
+          {/* 手动更正位置 */}
+          <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+            <Input
+              placeholder="省"
+              value={manualProvince}
+              onChange={(e) => setManualProvince(e.target.value)}
+              style={{ flex: 1 }}
+              allowClear
+            />
+            <Input
+              placeholder="市"
+              value={manualCity}
+              onChange={(e) => setManualCity(e.target.value)}
+              style={{ flex: 1 }}
+              allowClear
+            />
+            <Input
+              placeholder="县/区"
+              value={manualDistrict}
+              onChange={(e) => setManualDistrict(e.target.value)}
+              style={{ flex: 1 }}
               allowClear
             />
           </div>

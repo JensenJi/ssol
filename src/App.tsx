@@ -48,6 +48,7 @@ function App() {
   const [tableExpanded, setTableExpanded] = useState(false);
   const [tableHeight, setTableHeight] = useState(200);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [ipLocation, setIpLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
   // 从云开发加载认证专家数据
@@ -76,16 +77,30 @@ function App() {
     }).catch(() => {});
   }, []);
 
-  // 尝试获取用户位置
+  // 尝试获取用户位置：优先IP定位，备选GPS
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        },
-        () => { /* 用户拒绝定位，使用默认北京 */ }
-      );
-    }
+    // 1. 通过IP自动定位
+    fetch('https://ipapi.co/json/')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.latitude && data.longitude) {
+          const name = [data.region, data.city, data.district].filter(Boolean).join(' ');
+          setIpLocation({ name, lat: data.latitude, lng: data.longitude });
+          setUserLocation({ lat: data.latitude, lng: data.longitude });
+          setLocationName(name || '未知位置');
+        }
+      })
+      .catch(() => {
+        // IP定位失败，尝试GPS
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            },
+            () => { /* 用户拒绝定位，使用默认北京 */ }
+          );
+        }
+      });
   }, []);
 
   // 隐藏的管理后台入口：URL hash 或快捷键 Ctrl+Shift+A
@@ -109,29 +124,11 @@ function App() {
     setUserLocation({ lat, lng });
   }, []);
 
-  const handleLocationSelect = useCallback((location: string) => {
-    setLocationName(location);
-    const locMap: Record<string, { lat: number; lng: number }> = {
-      '北京': { lat: 39.9042, lng: 116.4074 },
-      '上海': { lat: 31.2304, lng: 121.4737 },
-      '山东 济宁 汶上县': { lat: 35.7150, lng: 116.5018 },
-      '山东': { lat: 36.6683, lng: 117.0202 },
-      '广东 广州': { lat: 23.1291, lng: 113.2644 },
-      '浙江 杭州': { lat: 30.2741, lng: 120.1551 },
-      '江苏 南京': { lat: 32.0603, lng: 118.7969 },
-      '湖北 武汉': { lat: 30.5928, lng: 114.3055 },
-      '四川 成都': { lat: 30.5728, lng: 104.0668 },
-      '新疆 乌鲁木齐': { lat: 43.8256, lng: 87.6168 },
-      '贵州 贵阳': { lat: 26.6470, lng: 106.6302 },
-      '广西 南宁': { lat: 22.8170, lng: 108.3665 },
-      '甘肃 兰州': { lat: 36.0611, lng: 103.8343 },
-      '江西 景德镇': { lat: 29.2689, lng: 117.2149 },
-      '云南 昆明': { lat: 25.0389, lng: 102.7183 },
-      '海南 海口': { lat: 19.1959, lng: 109.7462 },
-    };
-    const parts = location.split(' ');
-    const coords = locMap[location] || locMap[parts[0]] || locMap[parts[0] + ' ' + parts[1]];
-    if (coords) setUserLocation(coords);
+  const handleLocationUpdate = useCallback((loc: { lat: number; lng: number; name: string }) => {
+    setLocationName(loc.name);
+    if (loc.lat && loc.lng) {
+      setUserLocation({ lat: loc.lat, lng: loc.lng });
+    }
   }, []);
 
   const handleLocationName = useCallback((name: string) => {
@@ -276,8 +273,9 @@ function App() {
       {currentPage === 'home' && (
         <div className="app">
           <Navbar
-            onSearch={handleSearch} onLocationSelect={handleLocationSelect} onDistanceSelect={handleDistanceSelect}
+            onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
             onGoRegister={() => setCurrentPage('register')}
+            ipLocation={ipLocation}
           />
         <div className="main-content">
           <div className={`content-left ${sidebarVisible ? '' : 'full-width'}`}>
