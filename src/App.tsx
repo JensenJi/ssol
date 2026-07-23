@@ -304,9 +304,6 @@ function App() {
           </div>
           {sidebarVisible && (
             <div className="content-right">
-              <div className="sidebar-toggle-btn" onClick={() => setSidebarVisible(false)} title="隐藏关键词栏">
-                <RightOutlined />
-              </div>
               <Sidebar
                 allKeywords={allKeywords}
                 onKeywordClick={handleKeywordClick}
@@ -314,9 +311,15 @@ function App() {
               />
             </div>
           )}
+          {/* 侧栏开关按钮 - 放在main-content层级，确保不被遮挡 */}
           {!sidebarVisible && (
             <div className="show-sidebar-btn" onClick={() => setSidebarVisible(true)} title="显示关键词侧栏">
               <LeftOutlined />
+            </div>
+          )}
+          {sidebarVisible && (
+            <div className="hide-sidebar-btn" onClick={() => setSidebarVisible(false)} title="隐藏关键词栏">
+              <RightOutlined />
             </div>
           )}
         </div>
