@@ -2,11 +2,10 @@ import { Tag } from 'antd';
 import type { Doctor } from '../data/mockData';
 
 interface SidebarProps {
-  doctors: Doctor[];
+  doctors?: Doctor[];
   allKeywords: string[];
   onKeywordClick: (keyword: string) => void;
   onDoctorClick: (doctor: Doctor) => void;
-  onToggleSidebar?: () => void;
 }
 
 const extraKeywords = [
@@ -15,13 +14,12 @@ const extraKeywords = [
 ];
 
 export default function Sidebar({
-  allKeywords, onKeywordClick, onToggleSidebar,
+  allKeywords, onKeywordClick,
 }: SidebarProps) {
   const merged = [...new Set([...allKeywords, ...extraKeywords])];
 
   return (
     <div className="sidebar-panel">
-      <div className="sidebar-close-btn" onClick={onToggleSidebar} title="关闭侧栏">✕</div>
       <div className="keyword-tags-container">
         {merged.map((kw) => (
           <span

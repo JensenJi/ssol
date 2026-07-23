@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ConfigProvider, message, Modal, Button } from 'antd';
-import { LoginOutlined, UpOutlined, TableOutlined, LeftOutlined } from '@ant-design/icons';
+import { LoginOutlined, UpOutlined, TableOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
 import Navbar from './components/Navbar';
 import MapContainer from './components/MapContainer';
@@ -231,19 +231,22 @@ function App() {
   const handleMarkerClick = useCallback((doctor: Doctor) => { setSelectedDoctor(doctor); setProfileOpen(true); }, []);
   const handleKeywordClick = useCallback((keyword: string) => setSearchKeyword(keyword), []);
 
-  // 表格拖拽调整高度
+  // 表格拖拽调整高度：上拉不限高度，下拉最小留一行按钮(~40px)
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const startH = tableExpanded ? tableHeight : 0;
+    const startH = tableExpanded ? tableHeight : 40;
     dragRef.current = { startY: e.clientY, startHeight: startH };
     const handleMouseMove = (ev: MouseEvent) => {
       if (!dragRef.current) return;
       const delta = dragRef.current.startY - ev.clientY;
-      const newHeight = Math.max(100, Math.min(600, dragRef.current.startHeight + delta));
+      const newHeight = Math.max(40, dragRef.current.startHeight + delta);
       setTableHeight(newHeight);
       if (!tableExpanded && newHeight > 50) {
         setTableExpanded(true);
+      }
+      if (tableExpanded && newHeight <= 45) {
+        setTableExpanded(false);
       }
     };
     const handleMouseUp = () => {
@@ -283,7 +286,7 @@ function App() {
               locationName={locationName}
               onMapClick={handleMapClick} onMarkerClick={handleMarkerClick} onLocationName={handleLocationName}
             />
-            <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={tableExpanded ? { maxHeight: tableHeight } : {}}>
+            <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={{ height: tableExpanded ? tableHeight : 40 }}>
               <div className="drag-handle" onMouseDown={handleDragStart} title="向上拖动展开列表" />
               <Button
                 type="text"
@@ -294,16 +297,20 @@ function App() {
               >
                 {tableExpanded ? '收起列表' : `展开全部列表 (${filteredDoctors.length}人)`}
               </Button>
-              <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
+              {tableExpanded && (
+                <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
+              )}
             </div>
           </div>
           {sidebarVisible && (
             <div className="content-right">
+              <div className="sidebar-toggle-btn" onClick={() => setSidebarVisible(false)} title="隐藏关键词栏">
+                <RightOutlined />
+              </div>
               <Sidebar
                 allKeywords={allKeywords}
                 onKeywordClick={handleKeywordClick}
                 onDoctorClick={handleMarkerClick}
-                onToggleSidebar={() => setSidebarVisible(false)}
               />
             </div>
           )}
