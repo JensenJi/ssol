@@ -27,6 +27,14 @@ interface ResumeData {
   profile: string;
   experience: ResumeSection[];
   education: { school: string; degree: string; period: string }[];
+  sectionTitles: {
+    profile: string;
+    experience: string;
+    education: string;
+    details: string;
+    links: string;
+    skills: string;
+  };
 }
 
 const defaultResume: ResumeData = {
@@ -43,6 +51,14 @@ const defaultResume: ResumeData = {
   skills: [
     { name: '点这里添加技能', level: 80 },
   ],
+  sectionTitles: {
+    profile: 'Profile 个人简介',
+    experience: 'Experience 工作经历',
+    education: 'Education 教育背景',
+    details: 'Details 联系方式',
+    links: 'Links 链接',
+    skills: 'Skills 技能',
+  },
   profile: '点这里填写个人简介。介绍你的专业背景、核心能力和职业理念...',
   experience: [
     {
@@ -153,7 +169,12 @@ export default function ResumeEditor() {
         <div className="resume-main">
           {/* 个人简介 */}
           <section className="resume-section">
-            <h3 className="resume-section-title">Profile 个人简介</h3>
+            <Input
+              value={resume.sectionTitles.profile}
+              onChange={(e) => setResume((prev) => ({ ...prev, sectionTitles: { ...prev.sectionTitles, profile: e.target.value } }))}
+              className="resume-section-title-input"
+              style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, padding: '2px 6px' }}
+            />
             <Input.TextArea
               value={resume.profile}
               onChange={(e) => updateField('profile', e.target.value)}
@@ -166,7 +187,12 @@ export default function ResumeEditor() {
           {/* 工作经历 */}
           <section className="resume-section">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 className="resume-section-title">Experience 工作经历</h3>
+              <Input
+                value={resume.sectionTitles.experience}
+                onChange={(e) => setResume((prev) => ({ ...prev, sectionTitles: { ...prev.sectionTitles, experience: e.target.value } }))}
+                className="resume-section-title-input"
+                style={{ fontSize: 14, fontWeight: 600, padding: '2px 6px' }}
+              />
               <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addExperience}>
                 添加经历
               </Button>
@@ -250,7 +276,12 @@ export default function ResumeEditor() {
           {/* 教育背景 */}
           <section className="resume-section">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 className="resume-section-title">Education 教育背景</h3>
+              <Input
+                value={resume.sectionTitles.education}
+                onChange={(e) => setResume((prev) => ({ ...prev, sectionTitles: { ...prev.sectionTitles, education: e.target.value } }))}
+                className="resume-section-title-input"
+                style={{ fontSize: 14, fontWeight: 600, padding: '2px 6px' }}
+              />
               <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addEducation}>
                 添加教育
               </Button>
@@ -302,7 +333,12 @@ export default function ResumeEditor() {
         <div className="resume-sidebar">
           {/* 联系方式 */}
           <section className="resume-section">
-            <h3 className="resume-section-title">Details 联系方式</h3>
+            <Input
+              value={resume.sectionTitles.details}
+              onChange={(e) => setResume((prev) => ({ ...prev, sectionTitles: { ...prev.sectionTitles, details: e.target.value } }))}
+              className="resume-section-title-input"
+              style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, padding: '2px 6px' }}
+            />
             <div className="resume-detail-item">
               <EnvironmentOutlined style={{ color: '#1677ff', marginRight: 8 }} />
               <Input
@@ -334,7 +370,12 @@ export default function ResumeEditor() {
 
           {/* 链接 */}
           <section className="resume-section">
-            <h3 className="resume-section-title">Links 链接</h3>
+            <Input
+              value={resume.sectionTitles.links}
+              onChange={(e) => setResume((prev) => ({ ...prev, sectionTitles: { ...prev.sectionTitles, links: e.target.value } }))}
+              className="resume-section-title-input"
+              style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, padding: '2px 6px' }}
+            />
             {resume.links.map((link, idx) => (
               <div key={idx} className="resume-detail-item">
                 <LinkOutlined style={{ color: '#1677ff', marginRight: 8 }} />
@@ -356,7 +397,12 @@ export default function ResumeEditor() {
           {/* 技能 */}
           <section className="resume-section">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 className="resume-section-title">Skills 技能</h3>
+              <Input
+                value={resume.sectionTitles.skills}
+                onChange={(e) => setResume((prev) => ({ ...prev, sectionTitles: { ...prev.sectionTitles, skills: e.target.value } }))}
+                className="resume-section-title-input"
+                style={{ fontSize: 14, fontWeight: 600, padding: '2px 6px' }}
+              />
               <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addSkill}>
                 添加
               </Button>

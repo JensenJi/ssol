@@ -49,7 +49,7 @@ function App() {
   const [tableHeight, setTableHeight] = useState(200);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [ipLocation, setIpLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
-  const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
+  const dragRef = useRef<{ startY: number; startHeight: number; wasExpanded: boolean } | null>(null);
 
   // 从云开发加载认证专家数据
   useEffect(() => {
@@ -228,21 +228,23 @@ function App() {
   const handleMarkerClick = useCallback((doctor: Doctor) => { setSelectedDoctor(doctor); setProfileOpen(true); }, []);
   const handleKeywordClick = useCallback((keyword: string) => setSearchKeyword(keyword), []);
 
-  // 表格拖拽调整高度：上拉不限高度，下拉最小留一行按钮(~40px)
+  // 表格拖拽调整高度：上拉不限高度，下拉最小留一行(~40px)
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const startH = tableExpanded ? tableHeight : 40;
-    dragRef.current = { startY: e.clientY, startHeight: startH };
+    // 用ref存储初始状态，避免闭包捕获过期值
+    dragRef.current = { startY: e.clientY, startHeight: startH, wasExpanded: tableExpanded };
     const handleMouseMove = (ev: MouseEvent) => {
       if (!dragRef.current) return;
       const delta = dragRef.current.startY - ev.clientY;
       const newHeight = Math.max(40, dragRef.current.startHeight + delta);
       setTableHeight(newHeight);
-      if (!tableExpanded && newHeight > 50) {
+      // 用ref中的初始状态判断，而非闭包中的过期state
+      if (!dragRef.current.wasExpanded && newHeight > 50) {
         setTableExpanded(true);
       }
-      if (tableExpanded && newHeight <= 45) {
+      if (dragRef.current.wasExpanded && newHeight <= 45) {
         setTableExpanded(false);
       }
     };
@@ -262,7 +264,7 @@ function App() {
   return (
     <ConfigProvider locale={zhCN}>
       {currentPage === 'register' && (
-        <RegisterPage onBack={() => setCurrentPage('home')} onRegister={handleRegister} />
+        <RegisterPage onBack={() => setCurrentPage('home')} onRegister={handleRegister} ipLocation={ipLocation} />
       )}
       {currentPage === 'adminLogin' && (
         <AdminLogin onBack={() => setCurrentPage('home')} onLogin={handleAdminLogin} />
