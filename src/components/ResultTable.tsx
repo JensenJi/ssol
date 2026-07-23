@@ -74,12 +74,10 @@ export default function ResultTable({ doctors, onRowClick, favorites, onFavorite
   ];
 
   return (
-    <div className="result-table">
-      <Table<Doctor>
-        columns={columns} dataSource={doctors} rowKey="id"
-        pagination={false} size="small"
-        onRow={(record) => ({ onClick: () => onRowClick(record), style: { cursor: 'pointer' } })}
-      />
-    </div>
+    <Table<Doctor>
+      columns={columns} dataSource={doctors} rowKey="id"
+      pagination={false} size="small"
+      onRow={(record) => ({ onClick: () => onRowClick(record), style: { cursor: 'pointer' } })}
+    />
   );
 }

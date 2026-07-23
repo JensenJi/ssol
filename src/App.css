@@ -139,14 +139,25 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
   background: #fff;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   z-index: 30;
   box-shadow: 0 -2px 12px rgba(0,0,0,0.15);
   border-radius: 8px 8px 0 0;
 }
 .result-table.collapsed { height: 40px !important; }
 .result-table.collapsed .drag-handle { display: flex; }
-.result-table.expanded { overflow-y: auto; }
+.result-table.expanded { overflow: hidden; }
+/* 表格内容区域 - 只有这里滚动，拖拽手柄不受影响 */
+.result-table-content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.result-table-content .ant-table-wrapper {
+  height: 100%;
+}
+.result-table-content .ant-table-body {
+  overflow-y: auto !important;
+}
 .result-table .ant-table-row:hover { background: #e6f4ff !important; }
 
 /* 右侧面板 */

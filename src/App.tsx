@@ -309,9 +309,11 @@ function App() {
           )}
           {/* 结果列表 - 在main-content层级，绝对定位，始终浮在关键词之上 */}
           <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={{ height: tableExpanded ? tableHeight : 40 }}>
-            <div className="drag-handle" onMouseDown={handleDragStart} title="向上拖动展开列表" />
+            <div className="drag-handle" onMouseDown={handleDragStart} title="拖动调整列表高度" />
             {tableExpanded && (
-              <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
+              <div className="result-table-content">
+                <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
+              </div>
             )}
           </div>
         </div>
