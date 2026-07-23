@@ -105,9 +105,13 @@ function App() {
 
   // 隐藏的管理后台入口：URL hash 或快捷键 Ctrl+Shift+A
   useEffect(() => {
-    if (window.location.hash === '#/admin') {
-      setCurrentPage('adminLogin');
-    }
+    const checkAdminHash = () => {
+      if (window.location.hash === '#/admin') {
+        setCurrentPage('adminLogin');
+      }
+    };
+    checkAdminHash();
+    window.addEventListener('hashchange', checkAdminHash);
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'A') {
         e.preventDefault();
@@ -115,7 +119,10 @@ function App() {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('hashchange', checkAdminHash);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const handleSearch = useCallback((keyword: string) => setSearchKeyword(keyword.trim()), []);
@@ -226,7 +233,10 @@ function App() {
   }, []);
 
   const handleMarkerClick = useCallback((doctor: Doctor) => { setSelectedDoctor(doctor); setProfileOpen(true); }, []);
-  const handleKeywordClick = useCallback((keyword: string) => setSearchKeyword(keyword), []);
+  const handleKeywordClick = useCallback((keyword: string) => {
+    setSearchKeyword(keyword);
+    setTableExpanded(true);
+  }, []);
 
   // 表格拖拽调整高度：上拉不限高度，下拉最小留一行(~40px)
   const handleDragStart = useCallback((e: React.MouseEvent) => {

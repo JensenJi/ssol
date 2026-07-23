@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Upload, Button, Input, Divider } from 'antd';
 import {
-  PlusOutlined, EditOutlined, CameraOutlined,
+  PlusOutlined, EditOutlined, CameraOutlined, DeleteOutlined,
   PhoneOutlined, MailOutlined, EnvironmentOutlined,
   LinkOutlined,
 } from '@ant-design/icons';
@@ -116,6 +116,18 @@ export default function ResumeEditor() {
 
   const addSkill = () => {
     updateField('skills', [...resume.skills, { name: '新技能', level: 50 }]);
+  };
+
+  const removeSkill = (idx: number) => {
+    updateField('skills', resume.skills.filter((_, i) => i !== idx));
+  };
+
+  const addLink = () => {
+    updateField('links', [...resume.links, { label: '新链接', url: '' }]);
+  };
+
+  const removeLink = (idx: number) => {
+    updateField('links', resume.links.filter((_, i) => i !== idx));
   };
 
   return (
@@ -370,26 +382,55 @@ export default function ResumeEditor() {
 
           {/* 链接 */}
           <section className="resume-section">
-            <Input
-              value={resume.sectionTitles.links}
-              onChange={(e) => setResume((prev) => ({ ...prev, sectionTitles: { ...prev.sectionTitles, links: e.target.value } }))}
-              className="resume-section-title-input"
-              style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, padding: '2px 6px' }}
-            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Input
+                value={resume.sectionTitles.links}
+                onChange={(e) => setResume((prev) => ({ ...prev, sectionTitles: { ...prev.sectionTitles, links: e.target.value } }))}
+                className="resume-section-title-input"
+                style={{ fontSize: 14, fontWeight: 600, padding: '2px 6px' }}
+              />
+              <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addLink}>
+                添加
+              </Button>
+            </div>
             {resume.links.map((link, idx) => (
               <div key={idx} className="resume-detail-item">
-                <LinkOutlined style={{ color: '#1677ff', marginRight: 8 }} />
-                <Input
-                  value={link.url}
-                  onChange={(e) => {
-                    const updated = resume.links.map((item, i) =>
-                      i === idx ? { ...item, url: e.target.value } : item
-                    );
-                    updateField('links', updated);
-                  }}
-                  className="resume-input"
-                  placeholder={`点这里填写${link.label}链接`}
-                />
+                <LinkOutlined style={{ color: '#1677ff', marginRight: 8, flexShrink: 0 }} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <Input
+                      value={link.label}
+                      onChange={(e) => {
+                        const updated = resume.links.map((item, i) =>
+                          i === idx ? { ...item, label: e.target.value } : item
+                        );
+                        updateField('links', updated);
+                      }}
+                      className="resume-input"
+                      style={{ fontSize: 12, fontWeight: 600, flex: 1 }}
+                      placeholder="链接名称"
+                    />
+                    <Button
+                      size="small"
+                      type="text"
+                      danger
+                      onClick={() => removeLink(idx)}
+                      icon={<DeleteOutlined />}
+                      style={{ fontSize: 12, flexShrink: 0 }}
+                    />
+                  </div>
+                  <Input
+                    value={link.url}
+                    onChange={(e) => {
+                      const updated = resume.links.map((item, i) =>
+                        i === idx ? { ...item, url: e.target.value } : item
+                      );
+                      updateField('links', updated);
+                    }}
+                    className="resume-input"
+                    placeholder="点这里填写链接地址"
+                  />
+                </div>
               </div>
             ))}
           </section>
@@ -409,18 +450,28 @@ export default function ResumeEditor() {
             </div>
             {resume.skills.map((skill, idx) => (
               <div key={idx} className="resume-skill-item">
-                <Input
-                  value={skill.name}
-                  onChange={(e) => {
-                    const updated = resume.skills.map((item, i) =>
-                      i === idx ? { ...item, name: e.target.value } : item
-                    );
-                    updateField('skills', updated);
-                  }}
-                  className="resume-input"
-                  style={{ fontSize: 13, marginBottom: 4 }}
-                  placeholder="点这里填写技能名称"
-                />
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 4 }}>
+                  <Input
+                    value={skill.name}
+                    onChange={(e) => {
+                      const updated = resume.skills.map((item, i) =>
+                        i === idx ? { ...item, name: e.target.value } : item
+                      );
+                      updateField('skills', updated);
+                    }}
+                    className="resume-input"
+                    style={{ fontSize: 13, flex: 1 }}
+                    placeholder="点这里填写技能名称"
+                  />
+                  <Button
+                    size="small"
+                    type="text"
+                    danger
+                    onClick={() => removeSkill(idx)}
+                    icon={<DeleteOutlined />}
+                    style={{ fontSize: 12, flexShrink: 0 }}
+                  />
+                </div>
                 <div className="resume-skill-bar">
                   <div
                     className="resume-skill-fill"
