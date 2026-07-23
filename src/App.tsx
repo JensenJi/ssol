@@ -286,21 +286,6 @@ function App() {
               locationName={locationName}
               onMapClick={handleMapClick} onMarkerClick={handleMarkerClick} onLocationName={handleLocationName}
             />
-            <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={{ height: tableExpanded ? tableHeight : 40 }}>
-              <div className="drag-handle" onMouseDown={handleDragStart} title="向上拖动展开列表" />
-              <Button
-                type="text"
-                size="small"
-                block
-                icon={tableExpanded ? <UpOutlined /> : <TableOutlined />}
-                onClick={() => setTableExpanded(!tableExpanded)}
-              >
-                {tableExpanded ? '收起列表' : `展开全部列表 (${filteredDoctors.length}人)`}
-              </Button>
-              {tableExpanded && (
-                <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
-              )}
-            </div>
           </div>
           {sidebarVisible && (
             <div className="content-right">
@@ -311,7 +296,7 @@ function App() {
               />
             </div>
           )}
-          {/* 侧栏开关按钮 - 放在main-content层级，确保不被遮挡 */}
+          {/* 侧栏开关按钮 */}
           {!sidebarVisible && (
             <div className="show-sidebar-btn" onClick={() => setSidebarVisible(true)} title="显示关键词侧栏">
               <LeftOutlined />
@@ -322,6 +307,13 @@ function App() {
               <RightOutlined />
             </div>
           )}
+          {/* 结果列表 - 在main-content层级，绝对定位，始终浮在关键词之上 */}
+          <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={{ height: tableExpanded ? tableHeight : 40 }}>
+            <div className="drag-handle" onMouseDown={handleDragStart} title="向上拖动展开列表" />
+            {tableExpanded && (
+              <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
+            )}
+          </div>
         </div>
         <UserProfile
           user={selectedDoctor} open={profileOpen} onClose={() => setProfileOpen(false)}

@@ -130,12 +130,23 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
   width: 80px;
 }
 
-/* 结果表格 - 单层：拖拽手柄+按钮+表格合并 */
-.result-table { background: #fff; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+/* 结果表格 - 绝对定位在main-content底部，始终浮在关键词之上 */
+.result-table {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 30;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.15);
+  border-radius: 8px 8px 0 0;
+}
 .result-table.collapsed { height: 40px !important; }
 .result-table.collapsed .drag-handle { display: none; }
 .result-table.expanded { overflow-y: auto; }
-.result-table .ant-btn { border-radius: 0; margin-bottom: 4px; flex-shrink: 0; }
 .result-table .ant-table-row:hover { background: #e6f4ff !important; }
 
 /* 右侧面板 */
