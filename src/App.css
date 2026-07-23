@@ -31,7 +31,8 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
   70% { transform: translateX(-3px); }
   100% { transform: translateX(0); opacity: 1; }
 }
-.navbar-search { display: flex; align-items: center; flex: 1; max-width: 480px; justify-content: center; }
+.navbar-search { display: flex; align-items: center; }
+.navbar-center { display: flex; align-items: center; flex: 1; justify-content: center; gap: 16px; }
 .navbar-actions { flex-shrink: 0; }
 
 /* 主内容 */
@@ -202,6 +203,11 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
   color: #1677ff;
   background: #e6f4ff;
 }
+.kw-tag-active {
+  color: #fff !important;
+  background: #1677ff !important;
+  font-weight: 600;
+}
 
 /* 用户列表 */
 .expert-item { cursor: pointer; padding: 6px 0 !important; transition: background 0.2s; }
@@ -284,10 +290,14 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
     padding: 8px 12px; 
     gap: 8px;
   }
+  .navbar-center {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+  }
   .navbar-search { 
-    order: 3; 
+    flex: 1;
     max-width: 100%; 
-    width: 100%; 
   }
   .navbar-search .ant-input-affix-wrapper { 
     width: 100% !important; 
@@ -333,7 +343,7 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
 .success-section { text-align: center; padding: 40px 20px; }
 
 /* 管理后台 */
-.admin-page { min-height: 100vh; background: #f0f2f5; padding: 20px; }
+.admin-page { background: #f0f2f5; padding: 20px; }
 .admin-container { max-width: 1200px; margin: 0 auto; }
 .admin-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
 

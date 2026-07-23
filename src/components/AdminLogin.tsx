@@ -40,12 +40,8 @@ export default function AdminLogin({ onBack, onLogin }: AdminLoginProps) {
   };
 
   return (
-    <div className="register-page">
+    <div className="register-page" style={{ paddingTop: 80 }}>
       <div className="register-container" style={{ maxWidth: 400 }}>
-        <Button type="link" icon={<ArrowLeftOutlined />} onClick={onBack} className="back-btn">
-          返回首页
-        </Button>
-
         <Card className="register-card">
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <LockOutlined style={{ fontSize: 48, color: '#1677ff' }} />

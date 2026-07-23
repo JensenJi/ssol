@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Tag } from 'antd';
 import type { Doctor } from '../data/mockData';
 
@@ -6,6 +7,7 @@ interface SidebarProps {
   allKeywords: string[];
   onKeywordClick: (keyword: string) => void;
   onDoctorClick: (doctor: Doctor) => void;
+  currentKeyword?: string;
 }
 
 const extraKeywords = [
@@ -14,7 +16,7 @@ const extraKeywords = [
 ];
 
 export default function Sidebar({
-  allKeywords, onKeywordClick,
+  allKeywords, onKeywordClick, currentKeyword,
 }: SidebarProps) {
   const merged = [...new Set([...allKeywords, ...extraKeywords])];
 
@@ -24,7 +26,7 @@ export default function Sidebar({
         {merged.map((kw) => (
           <span
             key={kw}
-            className="kw-tag"
+            className={`kw-tag${currentKeyword === kw ? ' kw-tag-active' : ''}`}
             onClick={() => onKeywordClick(kw)}
           >
             {kw}

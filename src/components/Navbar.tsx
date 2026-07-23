@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Input, Button, Space, Modal, Select } from 'antd';
-import { SearchOutlined, UserAddOutlined, AimOutlined, EnvironmentOutlined } from '@ant-design/icons';
+import { SearchOutlined, UserAddOutlined, AimOutlined, EnvironmentOutlined, HomeOutlined, LockOutlined } from '@ant-design/icons';
 import PushpinIcon from './PushpinIcon';
 
 const distanceData = [
@@ -17,10 +17,13 @@ interface NavbarProps {
   onLocationUpdate?: (location: { lat: number; lng: number; name: string }) => void;
   onDistanceSelect?: (distance: number) => void;
   onGoRegister?: () => void;
+  onGoAdmin?: () => void;
   ipLocation?: { name: string; lat: number; lng: number } | null;
+  isLoggedIn?: boolean;
+  onGoHome?: () => void;
 }
 
-export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, ipLocation }: NavbarProps) {
+export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, onGoAdmin, ipLocation, isLoggedIn, onGoHome }: NavbarProps) {
   const [keyword, setKeyword] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogKeyword, setDialogKeyword] = useState('');
@@ -61,27 +64,36 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
           <span className="logo-text logo-drive-in">搜索在线</span>
           <span className="logo-slogan">搜索在线，你手上的大型人才库。</span>
         </div>
-        <div className="navbar-search">
-          <Input
-            size="large"
-            placeholder="你喜欢什么？搜一下！"
-            prefix={<SearchOutlined />}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            onKeyPress={handleKeyPress}
-            onClick={handleSearchClick}
-            style={{ width: 400, borderRadius: 8, cursor: 'pointer' }}
-            allowClear
-            readOnly
-          />
-          <Button type="primary" size="large" onClick={handleSearchClick} style={{ marginLeft: 8, borderRadius: 8 }}>
-            搜索
-          </Button>
-        </div>
-        <div className="navbar-actions">
-          <Space>
-            <Button type="primary" icon={<UserAddOutlined />} shape="round" onClick={onGoRegister}>注册/登录</Button>
-          </Space>
+        <div className="navbar-center">
+          <div className="navbar-search">
+            <Input
+              size="large"
+              placeholder="你喜欢什么？搜一下！"
+              prefix={<SearchOutlined />}
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyPress={handleKeyPress}
+              onClick={handleSearchClick}
+              style={{ width: 400, borderRadius: 8, cursor: 'pointer' }}
+              allowClear
+              readOnly
+            />
+            <Button type="primary" size="large" onClick={handleSearchClick} style={{ marginLeft: 8, borderRadius: 8 }}>
+              搜索
+            </Button>
+          </div>
+          <div className="navbar-actions">
+            <Space>
+              {isLoggedIn ? (
+                <>
+                  <Button type="link" icon={<HomeOutlined />} onClick={onGoHome}>首页</Button>
+                  <Button type="link" icon={<LockOutlined />} onClick={onGoAdmin}>管理后台</Button>
+                </>
+              ) : (
+                <Button type="primary" icon={<UserAddOutlined />} shape="round" onClick={onGoRegister}>注册/登录</Button>
+              )}
+            </Space>
+          </div>
         </div>
       </nav>
 

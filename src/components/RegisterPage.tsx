@@ -52,11 +52,8 @@ export default function RegisterPage({ onBack, onRegister, ipLocation }: Registe
 
   if (submitted) {
     return (
-      <div className="register-page">
+      <div className="register-page" style={{ paddingTop: 80 }}>
         <div className="register-container">
-          <Button type="link" icon={<ArrowLeftOutlined />} onClick={onBack} className="back-btn">
-            返回首页
-          </Button>
           <Card className="register-card">
             <div className="success-section">
               <CheckCircleOutlined style={{ fontSize: 64, color: '#52c41a' }} />
@@ -74,12 +71,8 @@ export default function RegisterPage({ onBack, onRegister, ipLocation }: Registe
   }
 
   return (
-    <div className="register-page">
+    <div className="register-page" style={{ paddingTop: 80 }}>
       <div className="register-container">
-        <Button type="link" icon={<ArrowLeftOutlined />} onClick={onBack} className="back-btn">
-          返回首页
-        </Button>
-
         <Card className="register-card">
           <Title level={3} style={{ textAlign: 'center', marginBottom: 8 }}>
             <UserOutlined style={{ color: '#1677ff', marginRight: 8 }} />

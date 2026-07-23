@@ -1,7 +1,7 @@
 import { Card, Row, Col, Statistic, Table, Tag, Button, Typography, Space } from 'antd';
 import {
   DashboardOutlined, UserAddOutlined, EyeOutlined,
-  SafetyCertificateOutlined, ArrowLeftOutlined,
+  SafetyCertificateOutlined,
   CheckOutlined, CloseOutlined,
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
@@ -87,9 +87,6 @@ export default function AdminDashboard({ onBack, pendingUsers, onApprove, onReje
     <div className="admin-page">
       <div className="admin-container">
         <div className="admin-header">
-          <Button type="link" icon={<ArrowLeftOutlined />} onClick={onBack}>
-            返回首页
-          </Button>
           <Title level={3} style={{ margin: 0 }}>
             <DashboardOutlined style={{ color: '#1677ff', marginRight: 8 }} />
             管理后台

@@ -274,20 +274,46 @@ function App() {
   return (
     <ConfigProvider locale={zhCN}>
       {currentPage === 'register' && (
-        <RegisterPage onBack={() => setCurrentPage('home')} onRegister={handleRegister} ipLocation={ipLocation} />
+        <>
+          <Navbar
+            onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
+            onGoRegister={() => {}} onGoHome={() => setCurrentPage('home')}
+            ipLocation={ipLocation} isLoggedIn={isLoggedIn}
+            onGoAdmin={() => setCurrentPage('adminLogin')}
+          />
+          <RegisterPage onBack={() => setCurrentPage('home')} onRegister={handleRegister} ipLocation={ipLocation} />
+        </>
       )}
       {currentPage === 'adminLogin' && (
-        <AdminLogin onBack={() => setCurrentPage('home')} onLogin={handleAdminLogin} />
+        <>
+          <Navbar
+            onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
+            onGoRegister={() => {}} onGoHome={() => setCurrentPage('home')}
+            ipLocation={ipLocation} isLoggedIn={isLoggedIn}
+            onGoAdmin={() => setCurrentPage('adminLogin')}
+          />
+          <AdminLogin onBack={() => setCurrentPage('home')} onLogin={handleAdminLogin} />
+        </>
       )}
       {currentPage === 'admin' && (
-        <AdminDashboard onBack={() => setCurrentPage('home')} pendingUsers={pendingUsers} onApprove={handleApprove} onReject={handleReject} />
+        <>
+          <Navbar
+            onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
+            onGoRegister={() => {}} onGoHome={() => setCurrentPage('home')}
+            ipLocation={ipLocation} isLoggedIn={true}
+            onGoAdmin={() => setCurrentPage('adminLogin')}
+          />
+          <AdminDashboard onBack={() => setCurrentPage('home')} pendingUsers={pendingUsers} onApprove={handleApprove} onReject={handleReject} />
+        </>
       )}
       {currentPage === 'home' && (
         <div className="app">
           <Navbar
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
             onGoRegister={() => setCurrentPage('register')}
-            ipLocation={ipLocation}
+            onGoHome={() => setCurrentPage('home')}
+            onGoAdmin={() => setCurrentPage('adminLogin')}
+            ipLocation={ipLocation} isLoggedIn={isLoggedIn}
           />
         <div className="main-content">
           <div className={`content-left ${sidebarVisible ? '' : 'full-width'}`}>
@@ -303,6 +329,7 @@ function App() {
                 allKeywords={allKeywords}
                 onKeywordClick={handleKeywordClick}
                 onDoctorClick={handleMarkerClick}
+                currentKeyword={searchKeyword}
               />
             </div>
           )}
