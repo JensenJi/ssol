@@ -9,7 +9,7 @@ import type { Doctor } from '../data/mockData';
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
-const categories = ['疑难杂症', '稀有工种', '非遗手艺', '农业专家', '特殊技能', '翻译语言', '医生'];
+const categories = ['疑难杂症', '稀有工种', '非遗手艺', '农业专家', '特殊技能', '翻译语言', '医生', '其它'];
 
 interface RegisterPageProps {
   onBack: () => void;
@@ -22,6 +22,8 @@ export default function RegisterPage({ onBack, onRegister, ipLocation }: Registe
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [isDoctor, setIsDoctor] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   const handleSubmit = async () => {
     try {
@@ -31,7 +33,7 @@ export default function RegisterPage({ onBack, onRegister, ipLocation }: Registe
         name: values.nickname,
         realName: values.realName,
         keywords: values.keywords?.split(/[,，、\s]+/).filter(Boolean) || [],
-        category: values.category,
+        category: showCustomInput ? customCategory : values.category,
         hospital: isDoctor ? values.workplace : (values.workplace || ''),
         title: values.title || '',
         province: ipLocation?.name?.split(' ')[0] || values.province || '',
@@ -130,10 +132,29 @@ export default function RegisterPage({ onBack, onRegister, ipLocation }: Registe
             </Form.Item>
 
             <Form.Item name="category" label="专业分类" rules={[{ required: true, message: '请选择分类' }]}>
-              <Select placeholder="请选择您的专业领域" onChange={(val) => setIsDoctor(val === '医生')}>
+              <Select
+                placeholder="请选择您的专业领域"
+                onChange={(val) => {
+                  setIsDoctor(val === '医生');
+                  setShowCustomInput(val === '其它');
+                }}
+              >
                 {categories.map((c) => <Option key={c} value={c}>{c}</Option>)}
               </Select>
             </Form.Item>
+            {showCustomInput && (
+              <Form.Item
+                name="customCategory"
+                rules={[{ required: true, message: '请输入自定义分类' }]}
+                style={{ marginTop: -16, marginBottom: 16 }}
+              >
+                <Input
+                  placeholder="请输入您的专业分类"
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                />
+              </Form.Item>
+            )}
 
             <Form.Item name="keywords" label="我的关键词" rules={[{ required: true, message: '请输入关键词' }]}>
               <Input placeholder="用空格或顿号分隔，如：渐冻症 罕见病 神经疾病" />
