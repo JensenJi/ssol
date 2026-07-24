@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Input, Button, Space, Modal, Select } from 'antd';
-import { SearchOutlined, UserAddOutlined, UserOutlined, TeamOutlined, AimOutlined, EnvironmentOutlined, HomeOutlined, LockOutlined, LogoutOutlined } from '@ant-design/icons';
+import { Input, Button, Modal, Select, Drawer } from 'antd';
+import { SearchOutlined, UserAddOutlined, UserOutlined, TeamOutlined, AimOutlined, EnvironmentOutlined, HomeOutlined, LockOutlined, LogoutOutlined, MenuOutlined, SettingOutlined } from '@ant-design/icons';
 import PushpinIcon from './PushpinIcon';
 
 const distanceData = [
@@ -34,6 +34,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
   const [dialogKeyword, setDialogKeyword] = useState('');
   const [dialogDistance, setDialogDistance] = useState(99999);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   // 手动更正位置
   const [manualProvince, setManualProvince] = useState('');
   const [manualCity, setManualCity] = useState('');
@@ -47,10 +48,8 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
   const handleDialogConfirm = () => {
     setKeyword(dialogKeyword);
     onSearch(dialogKeyword);
-    // 如果手动填写了位置，使用手动位置
     if (manualProvince && onLocationUpdate) {
       const name = [manualProvince, manualCity, manualDistrict].filter(Boolean).join(' ');
-      // 传递一个标记值，让 App 知道这是手动位置需要地理编码
       onLocationUpdate({ lat: -1, lng: -1, name });
     }
     if (onDistanceSelect) {
@@ -63,50 +62,92 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
     if (e.key === 'Enter') handleSearchClick();
   };
 
+  const handleMenuAction = (action: () => void) => {
+    setMenuOpen(false);
+    action();
+  };
+
   return (
     <>
       <nav className="navbar">
-        <div className="navbar-logo">
-          <PushpinIcon size={32} color="#1677ff" className="logo-icon" />
-          <div className="logo-text-group">
-            <span className="logo-text logo-drive-in">搜索在线</span>
-            <span className="logo-url">https://www.ssol.cn</span>
-          </div>
-          {showSlogan && <span className="logo-slogan">搜索在线，你手上的大型人才库。</span>}
+        {/* Logo */}
+        <div className="navbar-logo" onClick={onGoHome} style={{ cursor: 'pointer' }}>
+          <PushpinIcon size={26} color="#1677ff" className="logo-icon" />
+          <span className="logo-text logo-drive-in">搜索在线</span>
         </div>
-        <div className="navbar-center">
-          <div className="navbar-search">
-            <Input
-              size="large"
-              placeholder="你喜欢什么？搜一下！"
-              prefix={<SearchOutlined />}
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onKeyPress={handleKeyPress}
-              onClick={handleSearchClick}
-              style={{ width: 240, borderRadius: 8, cursor: 'pointer' }}
-              allowClear
-              readOnly
-            />
-          </div>
-          <div className="navbar-actions">
-            <Space size={8}>
-              <Button type="primary" icon={<HomeOutlined />} onClick={onGoHome} className="nav-btn">首页</Button>
-              {isLoggedIn ? (
-                <>
-                  <Button type="primary" icon={<UserOutlined />} onClick={onGoPersonal} className="nav-btn">个人中心</Button>
-                  <Button type="primary" icon={<TeamOutlined />} onClick={onGoUsers} className="nav-btn">用户管理</Button>
-                  <Button type="primary" icon={<LockOutlined />} onClick={onGoAdmin} className="nav-btn">管理后台</Button>
-                  <Button type="primary" danger icon={<LogoutOutlined />} onClick={onLogout} className="nav-btn nav-btn-logout">退出</Button>
-                </>
-              ) : (
-                <Button type="primary" icon={<UserAddOutlined />} onClick={() => setAuthModalOpen(true)} className="nav-btn">注册/登录</Button>
-              )}
-            </Space>
-          </div>
+
+        {/* 搜索框 */}
+        <div className="navbar-search">
+          <Input
+            placeholder="搜人才、搜技能..."
+            prefix={<SearchOutlined style={{ color: '#999' }} />}
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onKeyPress={handleKeyPress}
+            onClick={handleSearchClick}
+            style={{ borderRadius: 20, cursor: 'pointer', maxWidth: 280 }}
+            allowClear
+            readOnly
+          />
+        </div>
+
+        {/* 桌面端按钮 */}
+        <div className="navbar-actions navbar-desktop">
+          <Button type="text" icon={<HomeOutlined />} onClick={onGoHome} className="nav-btn-sm">首页</Button>
+          {isLoggedIn ? (
+            <>
+              <Button type="text" icon={<UserOutlined />} onClick={onGoPersonal} className="nav-btn-sm">我的</Button>
+              <Button type="text" icon={<SettingOutlined />} onClick={onGoAdmin} className="nav-btn-sm">管理</Button>
+              <Button type="text" icon={<LogoutOutlined />} onClick={onLogout} className="nav-btn-sm nav-btn-logout">退出</Button>
+            </>
+          ) : (
+            <Button type="primary" size="small" icon={<UserAddOutlined />} onClick={() => setAuthModalOpen(true)} style={{ borderRadius: 16 }}>登录</Button>
+          )}
+        </div>
+
+        {/* 手机端汉堡菜单 */}
+        <div className="navbar-hamburger" onClick={() => setMenuOpen(true)}>
+          <MenuOutlined style={{ fontSize: 20, color: '#333' }} />
         </div>
       </nav>
 
+      {/* 手机端侧边菜单 */}
+      <Drawer
+        title={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <PushpinIcon size={22} color="#1677ff" />
+          <span style={{ fontWeight: 700, color: '#1677ff' }}>搜索在线</span>
+        </div>}
+        placement="right"
+        onClose={() => setMenuOpen(false)}
+        open={menuOpen}
+        width={240}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <Button type="text" icon={<HomeOutlined />} onClick={() => handleMenuAction(() => onGoHome?.())} block style={{ justifyContent: 'flex-start', height: 44 }}>首页</Button>
+          {isLoggedIn ? (
+            <>
+              <Button type="text" icon={<UserOutlined />} onClick={() => handleMenuAction(() => onGoPersonal?.())} block style={{ justifyContent: 'flex-start', height: 44 }}>个人中心</Button>
+              <Button type="text" icon={<TeamOutlined />} onClick={() => handleMenuAction(() => onGoUsers?.())} block style={{ justifyContent: 'flex-start', height: 44 }}>用户管理</Button>
+              <Button type="text" icon={<SettingOutlined />} onClick={() => handleMenuAction(() => onGoAdmin?.())} block style={{ justifyContent: 'flex-start', height: 44 }}>管理后台</Button>
+              <div style={{ borderTop: '1px solid #f0f0f0', margin: '8px 0' }} />
+              <Button type="text" danger icon={<LogoutOutlined />} onClick={() => handleMenuAction(() => onLogout?.())} block style={{ justifyContent: 'flex-start', height: 44 }}>退出登录</Button>
+            </>
+          ) : (
+            <>
+              <div style={{ borderTop: '1px solid #f0f0f0', margin: '8px 0' }} />
+              <Button type="primary" icon={<UserAddOutlined />} onClick={() => handleMenuAction(() => setAuthModalOpen(true))} block style={{ height: 44, borderRadius: 8 }}>注册 / 登录</Button>
+            </>
+          )}
+        </div>
+        {ipLocation && (
+          <div style={{ position: 'absolute', bottom: 20, left: 20, right: 20, fontSize: 12, color: '#999' }}>
+            <EnvironmentOutlined style={{ marginRight: 4, color: '#52c41a' }} />
+            {ipLocation.name}
+          </div>
+        )}
+      </Drawer>
+
+      {/* 搜索设置弹窗 */}
       <Modal
         title={<span><AimOutlined style={{ color: '#1677ff', marginRight: 8 }} />搜索设置</span>}
         open={dialogOpen}
@@ -114,10 +155,9 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
         onCancel={() => setDialogOpen(false)}
         okText="开始搜索"
         cancelText="取消"
-        width={typeof window !== 'undefined' && window.innerWidth < 500 ? '92%' : 480}
+        width={typeof window !== 'undefined' && window.innerWidth < 500 ? '92%' : 420}
       >
         <div style={{ padding: '8px 0' }}>
-          {/* IP自动定位显示 */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>
               <EnvironmentOutlined style={{ color: '#1677ff', marginRight: 4 }} />
@@ -130,55 +170,26 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
               </div>
             ) : (
               <div style={{ background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 6, padding: '10px 14px', fontSize: 14, color: '#666' }}>
-                北京（默认位置，请在下方手动更正）
+                定位中...请在下方手动更正
               </div>
             )}
             <div style={{ fontSize: 12, color: '#999', marginTop: 6 }}>位置不准确？请在下方手动更正</div>
           </div>
-          {/* 手动更正位置 */}
           <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
-            <Input
-              placeholder="省"
-              value={manualProvince}
-              onChange={(e) => setManualProvince(e.target.value)}
-              style={{ flex: 1 }}
-              allowClear
-            />
-            <Input
-              placeholder="市"
-              value={manualCity}
-              onChange={(e) => setManualCity(e.target.value)}
-              style={{ flex: 1 }}
-              allowClear
-            />
-            <Input
-              placeholder="县/区"
-              value={manualDistrict}
-              onChange={(e) => setManualDistrict(e.target.value)}
-              style={{ flex: 1 }}
-              allowClear
-            />
+            <Input placeholder="省" value={manualProvince} onChange={(e) => setManualProvince(e.target.value)} style={{ flex: 1 }} allowClear />
+            <Input placeholder="市" value={manualCity} onChange={(e) => setManualCity(e.target.value)} style={{ flex: 1 }} allowClear />
+            <Input placeholder="县/区" value={manualDistrict} onChange={(e) => setManualDistrict(e.target.value)} style={{ flex: 1 }} allowClear />
           </div>
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>我的关键词</div>
-            <Input
-              placeholder="如：英语、渐冻症、古琴修复..."
-              value={dialogKeyword}
-              onChange={(e) => setDialogKeyword(e.target.value)}
-              allowClear
-            />
+            <Input placeholder="如：英语、渐冻症、古琴修复..." value={dialogKeyword} onChange={(e) => setDialogKeyword(e.target.value)} allowClear />
             <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
               提示：英语也有门槛，PETS5以下或CET-6以下不被收录信息库，雅思托福可以等
             </div>
           </div>
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>距离</div>
-            <Select
-              value={dialogDistance}
-              onChange={setDialogDistance}
-              style={{ width: '100%' }}
-              options={distanceData}
-            />
+            <Select value={dialogDistance} onChange={setDialogDistance} style={{ width: '100%' }} options={distanceData} />
           </div>
         </div>
       </Modal>
@@ -194,23 +205,8 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
         <div style={{ textAlign: 'center', padding: '20px 0 10px' }}>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 24 }}>请选择</div>
           <div style={{ display: 'flex', gap: 24, justifyContent: 'center' }}>
-            <Button
-              type="primary"
-              size="large"
-              icon={<UserAddOutlined />}
-              onClick={() => { setAuthModalOpen(false); onGoRegister?.(); }}
-              style={{ width: 120, height: 48, fontSize: 16, borderRadius: 8 }}
-            >
-              注册
-            </Button>
-            <Button
-              size="large"
-              icon={<UserOutlined />}
-              onClick={() => { setAuthModalOpen(false); onGoLogin?.(); }}
-              style={{ width: 120, height: 48, fontSize: 16, borderRadius: 8 }}
-            >
-              登录
-            </Button>
+            <Button type="primary" size="large" icon={<UserAddOutlined />} onClick={() => { setAuthModalOpen(false); onGoRegister?.(); }} style={{ width: 120, height: 48, fontSize: 16, borderRadius: 8 }}>注册</Button>
+            <Button size="large" icon={<UserOutlined />} onClick={() => { setAuthModalOpen(false); onGoLogin?.(); }} style={{ width: 120, height: 48, fontSize: 16, borderRadius: 8 }}>登录</Button>
           </div>
           <div style={{ fontSize: 12, color: '#999', marginTop: 16 }}>注册过的用户请直接登录，无需重复注册</div>
         </div>

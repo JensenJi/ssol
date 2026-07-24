@@ -14,6 +14,8 @@ import UserManagement from './components/UserManagement';
 import { userAPI, visitorAPI } from './lib/cloudbase';
 import { mockDoctors, calculateDistance } from './data/mockData';
 import type { Doctor } from './data/mockData';
+import { useSupabaseAuth } from './hooks/useSupabaseAuth';
+import AuthModal from './components/AuthModal';
 import './App.css';
 
 // 检测设备信息
@@ -48,6 +50,26 @@ function App() {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [favTarget, setFavTarget] = useState<Doctor | null>(null);
   const [deviceInfo] = useState(detectDeviceInfo);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  // Supabase 认证
+  const { user: supabaseUser, configured: supabaseConfigured, signUp, signIn, signOut } = useSupabaseAuth();
+
+  // Supabase 登录成功后同步状态
+  useEffect(() => {
+    if (supabaseUser && !isLoggedIn) {
+      setIsLoggedIn(true);
+      if (!currentUser) {
+        setCurrentUser({
+          id: supabaseUser.id,
+          name: supabaseUser.displayName || supabaseUser.email.split('@')[0],
+          keywords: [],
+          likes: 0,
+          verified: false,
+        });
+      }
+    }
+  }, [supabaseUser]);
   const [currentPage, setCurrentPage] = useState<'home' | 'register' | 'admin' | 'adminLogin' | 'personal' | 'users'>('home');
   const [currentUser, setCurrentUser] = useState<Partial<Doctor> | null>(() => {
     const saved = localStorage.getItem('ssol_currentUser');
@@ -315,21 +337,32 @@ function App() {
     if (favTarget) { setFavorites((prev) => [...prev, favTarget.id]); message.success(`已收藏 ${favTarget.name}`); setFavTarget(null); }
   }, [favTarget, currentUser]);
 
-  // 导航栏登录按钮：直接登录
+  // 导航栏登录按钮：Supabase配置时打开邮箱登录弹窗，否则直接登录
   const handleNavLogin = useCallback(() => {
-    setIsLoggedIn(true);
-    if (!currentUser) {
-      const defaultUser: Partial<Doctor> = {
-        id: `user-${Date.now()}`,
-        name: '我的昵称',
-        keywords: [],
-        likes: 0,
-        verified: false,
-      };
-      setCurrentUser(defaultUser);
+    if (supabaseConfigured) {
+      setAuthModalOpen(true);
+    } else {
+      setIsLoggedIn(true);
+      if (!currentUser) {
+        const defaultUser: Partial<Doctor> = {
+          id: `user-${Date.now()}`,
+          name: '我的昵称',
+          keywords: [],
+          likes: 0,
+          verified: false,
+        };
+        setCurrentUser(defaultUser);
+      }
+      message.success('登录成功');
     }
-    message.success('登录成功');
-  }, [currentUser]);
+  }, [currentUser, supabaseConfigured]);
+
+  // Supabase 登录成功回调
+  const handleAuthSuccess = useCallback(() => {
+    setAuthModalOpen(false);
+    setIsLoggedIn(true);
+    if (favTarget) { setFavorites((prev) => [...prev, favTarget.id]); message.success(`已收藏 ${favTarget.name}`); setFavTarget(null); }
+  }, [favTarget]);
 
   const allKeywords = useMemo(() => {
     const freqMap = new Map<string, number>();
@@ -427,8 +460,9 @@ function App() {
     setCurrentPage('home');
     localStorage.removeItem('ssol_loggedIn');
     localStorage.removeItem('ssol_currentUser');
+    if (supabaseConfigured) signOut();
     message.success('已退出登录');
-  }, []);
+  }, [supabaseConfigured, signOut]);
 
   const handleAdminLogin = useCallback(() => {
     setIsAdminLoggedIn(true);
@@ -622,15 +656,24 @@ function App() {
           isFavorited={selectedDoctor ? favorites.includes(selectedDoctor.id) : false}
           onFavorite={() => selectedDoctor && handleFavorite(selectedDoctor)} isLoggedIn={isLoggedIn}
         />
-        <Modal title="收藏需要登录" open={loginModalOpen} onCancel={() => setLoginModalOpen(false)} onOk={handleLogin} okText="登录" cancelText="取消">
+        <Modal title="收藏需要登录" open={loginModalOpen} onCancel={() => setLoginModalOpen(false)} onOk={() => { setLoginModalOpen(false); if (supabaseConfigured) setAuthModalOpen(true); else handleLogin(); }} okText="登录" cancelText="取消">
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <LoginOutlined style={{ fontSize: 48, color: '#1677ff', marginBottom: 16 }} />
             <p>收藏功能需要先注册/登录</p>
-            <p style={{ color: '#999', fontSize: 12 }}>（MVP演示：点击「登录」即可）</p>
+            {supabaseConfigured ? <p style={{ color: '#999', fontSize: 12 }}>请使用邮箱注册或登录</p> : <p style={{ color: '#999', fontSize: 12 }}>（MVP演示：点击「登录」即可）</p>}
           </div>
         </Modal>
         </div>
       )}
+
+      {/* Supabase 邮箱登录/注册弹窗 */}
+      <AuthModal
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onLogin={signIn}
+        onRegister={signUp}
+        onSuccess={handleAuthSuccess}
+      />
     </ConfigProvider>
   );
 }
