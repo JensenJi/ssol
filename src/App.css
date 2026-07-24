@@ -3,7 +3,7 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
 .app { display: flex; flex-direction: column; min-height: 100vh; background: #f0f2f5; }
 
 /* 导航栏 - 蓝底白字居中 */
-.navbar { display: flex; align-items: center; justify-content: center; padding: 12px 24px; background: #1677ff; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 100; gap: 24px; flex-shrink: 0; height: 56px; }
+.navbar { display: flex; align-items: center; justify-content: center; padding: 12px 24px; background: #7179e9; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 100; gap: 24px; flex-shrink: 0; height: 56px; }
 .navbar-logo { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .logo-text-group { display: flex; flex-direction: column; line-height: 1.2; }
 .logo-text { font-size: 20px; font-weight: 700; color: #fff; letter-spacing: 2px; }

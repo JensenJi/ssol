@@ -101,7 +101,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
               <Button type="text" icon={<LogoutOutlined />} onClick={onLogout} className="nav-btn-sm nav-btn-logout">退出</Button>
             </>
           ) : (
-            <Button type="primary" size="small" icon={<UserAddOutlined />} onClick={() => setAuthModalOpen(true)} style={{ borderRadius: 16 }}>登录</Button>
+            <Button type="text" size="small" icon={<UserAddOutlined />} onClick={() => setAuthModalOpen(true)} className="nav-btn-sm">登录</Button>
           )}
         </div>
 
@@ -114,8 +114,8 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
       {/* 手机端侧边菜单 */}
       <Drawer
         title={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <PushpinIcon size={22} color="#1677ff" />
-          <span style={{ fontWeight: 700, color: '#1677ff' }}>搜索在线</span>
+          <PushpinIcon size={22} color="#e53935" />
+          <span style={{ fontWeight: 700, color: '#7179e9' }}>搜索在线</span>
         </div>}
         placement="right"
         onClose={() => setMenuOpen(false)}

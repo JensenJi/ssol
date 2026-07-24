@@ -6,7 +6,7 @@ interface PushpinIconProps {
   style?: React.CSSProperties;
 }
 
-export default function PushpinIcon({ size = 28, color = '#1677ff', className, style }: PushpinIconProps) {
+export default function PushpinIcon({ size = 28, color = '#e53935', className, style }: PushpinIconProps) {
   return (
     <svg
       width={size}
