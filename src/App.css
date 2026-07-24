@@ -284,6 +284,16 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
     padding: 8px 12px; 
     gap: 8px;
   }
+  .navbar-logo { flex: 1; min-width: 0; }
+  .navbar-actions { 
+    flex-wrap: wrap; 
+    gap: 4px !important;
+  }
+  .nav-btn { 
+    height: 34px !important; 
+    padding: 0 12px !important; 
+    font-size: 13px !important; 
+  }
   .navbar-center {
     order: 3;
     width: 100%;
@@ -298,6 +308,7 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
   }
   .logo-slogan { display: none; }
   .logo-text { font-size: 16px; }
+  .logo-url { font-size: 10px; }
   .map-wrapper { min-height: 200px; }
   .map-container { min-height: 200px; }
   .result-table { 

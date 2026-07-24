@@ -114,7 +114,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
         onCancel={() => setDialogOpen(false)}
         okText="开始搜索"
         cancelText="取消"
-        width={480}
+        width={typeof window !== 'undefined' && window.innerWidth < 500 ? '92%' : 480}
       >
         <div style={{ padding: '8px 0' }}>
           {/* IP自动定位显示 */}
