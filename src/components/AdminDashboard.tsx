@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Card, Row, Col, Statistic, Table, Tag, Button, Typography, Space, Input, Divider } from 'antd';
+import { pinyin } from 'pinyin-pro';
 import {
   DashboardOutlined, UserAddOutlined, EyeOutlined,
   SafetyCertificateOutlined, TagsOutlined,
@@ -74,14 +75,19 @@ export default function AdminDashboard({ onBack, pendingUsers, onApprove, onReje
   const groupedKeywords = useMemo(() => {
     const groups: Record<string, string[]> = {};
     keywords.forEach((kw) => {
-      // 简单按 Unicode 编码排序（中文按拼音近似）
-      const firstChar = kw.charAt(0);
-      if (!groups[firstChar]) groups[firstChar] = [];
-      groups[firstChar].push(kw);
+      // 获取拼音首字母（大写）
+      const py = pinyin(kw.charAt(0), { pattern: 'first', toneType: 'none' }).toUpperCase();
+      const letter = /^[A-Z]$/.test(py) ? py : '#';
+      if (!groups[letter]) groups[letter] = [];
+      groups[letter].push(kw);
     });
-    // 按首字符排序
+    // 按字母顺序排序，# 放最后
     return Object.entries(groups)
-      .sort(([a], [b]) => a.localeCompare(b, 'zh-CN'))
+      .sort(([a], [b]) => {
+        if (a === '#') return 1;
+        if (b === '#') return -1;
+        return a.localeCompare(b);
+      })
       .map(([letter, kws]) => ({ letter, keywords: kws.sort((a, b) => a.localeCompare(b, 'zh-CN')) }));
   }, [keywords]);
   const pendingColumns = [

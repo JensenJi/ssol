@@ -9,6 +9,7 @@ import UserProfile from './components/UserProfile';
 import RegisterPage from './components/RegisterPage';
 import AdminDashboard from './components/AdminDashboard';
 import AdminLogin from './components/AdminLogin';
+import PersonalCenter from './components/PersonalCenter';
 import { userAPI, visitorAPI } from './lib/cloudbase';
 import { mockDoctors, calculateDistance } from './data/mockData';
 import type { Doctor } from './data/mockData';
@@ -41,7 +42,8 @@ function App() {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [favTarget, setFavTarget] = useState<Doctor | null>(null);
   const [deviceInfo] = useState(detectDeviceInfo);
-  const [currentPage, setCurrentPage] = useState<'home' | 'register' | 'admin' | 'adminLogin'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'register' | 'admin' | 'adminLogin' | 'personal'>('home');
+  const [currentUser, setCurrentUser] = useState<Partial<Doctor> | null>(null);
   const [pendingUsers, setPendingUsers] = useState<Partial<Doctor>[]>([]);
   const [experts, setExperts] = useState<Doctor[]>(mockDoctors.filter(d => d.verified));
   const [tableExpanded, setTableExpanded] = useState(false);
@@ -155,8 +157,17 @@ function App() {
 
   const handleLogin = useCallback(() => {
     setIsLoggedIn(true); setLoginModalOpen(false);
+    // 模拟当前用户（实际应从后端获取）
+    if (!currentUser) {
+      setCurrentUser({
+        name: '我的昵称',
+        keywords: [],
+        likes: 0,
+        verified: false,
+      });
+    }
     if (favTarget) { setFavorites((prev) => [...prev, favTarget.id]); message.success(`已收藏 ${favTarget.name}`); setFavTarget(null); }
-  }, [favTarget]);
+  }, [favTarget, currentUser]);
 
   const allKeywords = useMemo(() => {
     const freqMap = new Map<string, number>();
@@ -193,6 +204,10 @@ function App() {
         createdAt: new Date(),
       });
       message.success('注册申请已提交，等待管理员审核');
+      // 注册成功后自动登录
+      setIsLoggedIn(true);
+      setCurrentUser(user);
+      setCurrentPage('personal');
       // 刷新待审核列表
       const pending = await userAPI.getPendingUsers();
       setPendingUsers(pending as Partial<Doctor>[]);
@@ -284,6 +299,15 @@ function App() {
           <RegisterPage onBack={() => setCurrentPage('home')} onRegister={handleRegister} ipLocation={ipLocation} />
         </>
       )}
+      {currentPage === 'personal' && currentUser && (
+        <PersonalCenter
+          onBack={() => setCurrentPage('home')}
+          user={currentUser}
+          favorites={favorites}
+          allDoctors={experts}
+          onUpdateUser={setCurrentUser}
+        />
+      )}
       {currentPage === 'adminLogin' && (
         <>
           <Navbar
@@ -313,6 +337,7 @@ function App() {
             onGoRegister={() => setCurrentPage('register')}
             onGoHome={() => setCurrentPage('home')}
             onGoAdmin={() => setCurrentPage('adminLogin')}
+            onGoPersonal={() => setCurrentPage('personal')}
             ipLocation={ipLocation} isLoggedIn={isLoggedIn}
           />
         <div className="main-content">

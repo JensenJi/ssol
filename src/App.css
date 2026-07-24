@@ -34,8 +34,7 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
 .navbar-search { display: flex; align-items: center; }
 .navbar-center { display: flex; align-items: center; flex: 1; justify-content: center; gap: 16px; }
 .navbar-actions { flex-shrink: 0; }
-.nav-link-btn { font-size: 14px !important; color: #333 !important; border-radius: 20px !important; padding: 4px 12px !important; }
-.nav-link-btn:hover { color: #1677ff !important; background: #e6f4ff !important; }
+.nav-btn { border-radius: 20px !important; height: 40px !important; padding: 0 20px !important; font-size: 16px !important; }
 
 /* 主内容 */
 .main-content { flex: 1; display: flex; overflow: visible; position: relative; }

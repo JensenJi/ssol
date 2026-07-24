@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Input, Button, Space, Modal, Select } from 'antd';
-import { SearchOutlined, UserAddOutlined, AimOutlined, EnvironmentOutlined, HomeOutlined, LockOutlined } from '@ant-design/icons';
+import { SearchOutlined, UserAddOutlined, UserOutlined, AimOutlined, EnvironmentOutlined, HomeOutlined, LockOutlined } from '@ant-design/icons';
 import PushpinIcon from './PushpinIcon';
 
 const distanceData = [
@@ -18,12 +18,13 @@ interface NavbarProps {
   onDistanceSelect?: (distance: number) => void;
   onGoRegister?: () => void;
   onGoAdmin?: () => void;
+  onGoPersonal?: () => void;
   ipLocation?: { name: string; lat: number; lng: number } | null;
   isLoggedIn?: boolean;
   onGoHome?: () => void;
 }
 
-export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, onGoAdmin, ipLocation, isLoggedIn, onGoHome }: NavbarProps) {
+export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, onGoAdmin, onGoPersonal, ipLocation, isLoggedIn, onGoHome }: NavbarProps) {
   const [keyword, setKeyword] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogKeyword, setDialogKeyword] = useState('');
@@ -83,12 +84,15 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
             </Button>
           </div>
           <div className="navbar-actions">
-            <Space size={4}>
-              <Button type="text" icon={<HomeOutlined />} onClick={onGoHome} className="nav-link-btn">首页</Button>
+            <Space size={8}>
+              <Button type="primary" icon={<HomeOutlined />} onClick={onGoHome} className="nav-btn">首页</Button>
               {isLoggedIn ? (
-                <Button type="text" icon={<LockOutlined />} onClick={onGoAdmin} className="nav-link-btn">管理后台</Button>
+                <>
+                  <Button type="primary" icon={<UserOutlined />} onClick={onGoPersonal} className="nav-btn">个人中心</Button>
+                  <Button type="primary" icon={<LockOutlined />} onClick={onGoAdmin} className="nav-btn">管理后台</Button>
+                </>
               ) : (
-                <Button type="text" icon={<UserAddOutlined />} onClick={onGoRegister} className="nav-link-btn">注册/登录</Button>
+                <Button type="primary" icon={<UserAddOutlined />} onClick={onGoRegister} className="nav-btn">注册/登录</Button>
               )}
             </Space>
           </div>
