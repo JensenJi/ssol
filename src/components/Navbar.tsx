@@ -79,7 +79,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
         {/* 搜索框 */}
         <div className="navbar-search">
           <Input
-            placeholder="搜人才、搜技能..."
+            placeholder="你手上的专业人才库"
             prefix={<SearchOutlined style={{ color: '#999' }} />}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
