@@ -433,7 +433,7 @@ function App() {
             )}
           </div>
         </div>
-        <Footer onGoHome={() => setCurrentPage('home')} onGoPersonal={() => setCurrentPage('personal')} />
+        <Footer onGoHome={() => setCurrentPage('home')} onGoRegister={() => setCurrentPage('register')} />
         <UserProfile
           user={selectedDoctor} open={profileOpen} onClose={() => setProfileOpen(false)}
           isFavorited={selectedDoctor ? favorites.includes(selectedDoctor.id) : false}
