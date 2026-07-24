@@ -314,11 +314,19 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
   .logo-slogan { display: none; }
   .logo-text { font-size: 15px; letter-spacing: 1px; }
   .logo-url { font-size: 9px; }
-  .map-wrapper { min-height: 200px; }
+  .main-content { flex-direction: column; }
+  .map-wrapper { min-height: 200px; max-height: 55vh; }
   .map-container { min-height: 200px; }
   .result-table { 
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
     overflow-x: auto; 
     padding: 0 8px 8px; 
+    flex-shrink: 0;
   }
   .ant-table { 
     font-size: 12px; 
@@ -326,6 +334,8 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
   .ant-table-cell { 
     padding: 6px 8px !important; 
   }
+  .drag-handle { height: 14px !important; background: #f0f0f0; }
+  .drag-handle::after { width: 80px; height: 5px; background: #1677ff; border-radius: 3px; }
 }
 
 /* 响应式 - 小屏手机 */
