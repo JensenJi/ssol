@@ -11,6 +11,7 @@ import AdminDashboard from './components/AdminDashboard';
 import AdminLogin from './components/AdminLogin';
 import PersonalCenter from './components/PersonalCenter';
 import UserManagement from './components/UserManagement';
+import Footer from './components/Footer';
 import { userAPI, visitorAPI } from './lib/cloudbase';
 import { mockDoctors, calculateDistance } from './data/mockData';
 import type { Doctor } from './data/mockData';
@@ -432,6 +433,7 @@ function App() {
             )}
           </div>
         </div>
+        <Footer onGoHome={() => setCurrentPage('home')} onGoPersonal={() => setCurrentPage('personal')} />
         <UserProfile
           user={selectedDoctor} open={profileOpen} onClose={() => setProfileOpen(false)}
           isFavorited={selectedDoctor ? favorites.includes(selectedDoctor.id) : false}

@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
-import { Card, Row, Col, Statistic, Table, Tag, Button, Typography, Space, Input, Divider, Tabs, Modal, Form, message } from 'antd';
-import { pinyin } from 'pinyin-pro';
+import { Card, Row, Col, Statistic, Table, Tag, Button, Typography, Space, Input, Tabs, Modal, Form, message, Descriptions, Alert } from 'antd';
 import {
   DashboardOutlined, UserAddOutlined, EyeOutlined,
-  SafetyCertificateOutlined, TagsOutlined,
-  CheckOutlined, CloseOutlined, PlusOutlined, DeleteOutlined,
-  KeyOutlined, LockOutlined,
+  SafetyCertificateOutlined,
+  CheckOutlined, CloseOutlined,
+  KeyOutlined, LockOutlined, EyeOutlined as EyeIcon,
+  WarningOutlined,
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
 
@@ -49,20 +49,62 @@ const regionStats = [
   { name: '其他', count: 434 },
 ];
 
+// 违规词检测列表
+const VIOLATION_WORDS = [
+  '赌博', '色情', '暴力', '毒品', '诈骗', '传销', '邪教', '恐怖',
+  '反动', '分裂', '颠覆', '暴乱', '走私', '贩毒', '卖淫', '娼',
+  '枪支', '弹药', '爆炸', '假币', '洗钱', '非法集资', '高利贷',
+];
+
+// 检测文本中的违规词
+function checkViolation(text: string): string[] {
+  if (!text) return [];
+  return VIOLATION_WORDS.filter((w) => text.includes(w));
+}
+
+// 检测图片URL是否可疑（简单检测）
+function checkPhotoViolation(photo: string): boolean {
+  if (!photo) return false;
+  // 检查是否为base64图片（正常）或外部链接
+  if (photo.startsWith('data:image')) return false;
+  // 外部链接标记为需要人工检查
+  return photo.startsWith('http');
+}
+
 export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, onApprove, onReject }: AdminDashboardProps) {
-  const [keywords, setKeywords] = useState<string[]>([
-    '渐冻症', '运动神经元病', '罕见神经疾病', '法洛四联症', '先天性心脏畸形', '大动脉转位',
-    '陶瓷修复', '古瓷鉴损', '锔瓷', '苗药浴', '瑶医火功', '民族医药', '陨石鉴定', '矿石分析',
-    '地质勘探', '果树嫁接', '柑橘黄龙病', '果树急救', '维语翻译', '古丝绸之路文献', '中亚语言',
-    '冰川潜水', '洞穴探险救援', '深水打捞', '古琴修复', '斫琴', '丝弦制作', '冰川退缩研究',
-    '冻土工程', '极地科考', '假肢矫形', '仿生义肢', '步态分析', '尼曼匹克病', '戈谢病',
-    '溶酶体贮积症', '船舶堵漏', '水下焊接', '沉船打捞', '壮锦织造', '侗族大歌', '非遗手工艺',
-    '高压线带电作业', '特高压检修', '电力抢险', '皮影戏', '景泰蓝', '苏绣', '漆器', '剪纸', '泥塑', '木雕',
-    '银饰锻造', '扎染', '蜡染', '油纸伞', '竹编', '土陶',
-  ]);
-  const [newKeyword, setNewKeyword] = useState('');
   const [pwdModalOpen, setPwdModalOpen] = useState(false);
   const [pwdForm] = Form.useForm();
+  const [detailUser, setDetailUser] = useState<Partial<Doctor> | null>(null);
+  const [detailViolations, setDetailViolations] = useState<{ field: string; words: string[] }[]>([]);
+  const [photoWarning, setPhotoWarning] = useState(false);
+
+  const handleViewDetail = (user: Partial<Doctor>) => {
+    setDetailUser(user);
+    // 检测违规
+    const violations: { field: string; words: string[] }[] = [];
+    if (user.name) {
+      const v = checkViolation(user.name);
+      if (v.length) violations.push({ field: '姓名', words: v });
+    }
+    if (user.bio) {
+      const v = checkViolation(user.bio);
+      if (v.length) violations.push({ field: '自我介绍', words: v });
+    }
+    if (user.keywords) {
+      const v = user.keywords.flatMap((k) => checkViolation(k));
+      if (v.length) violations.push({ field: '关键词', words: [...new Set(v)] });
+    }
+    if (user.hospital) {
+      const v = checkViolation(user.hospital);
+      if (v.length) violations.push({ field: '工作单位', words: v });
+    }
+    if (user.title) {
+      const v = checkViolation(user.title);
+      if (v.length) violations.push({ field: '职称', words: v });
+    }
+    setDetailViolations(violations);
+    setPhotoWarning(checkPhotoViolation((user as any).photo || ''));
+  };
 
   const handleChangePassword = async () => {
     try {
@@ -84,36 +126,6 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
     } catch { /* ignore */ }
   };
 
-  const addKeyword = () => {
-    if (newKeyword.trim() && !keywords.includes(newKeyword.trim())) {
-      setKeywords([...keywords, newKeyword.trim()]);
-      setNewKeyword('');
-    }
-  };
-
-  const removeKeyword = (kw: string) => {
-    setKeywords(keywords.filter((k) => k !== kw));
-  };
-
-  // 按拼音首字母分组排序
-  const groupedKeywords = useMemo(() => {
-    const groups: Record<string, string[]> = {};
-    keywords.forEach((kw) => {
-      // 获取拼音首字母（大写）
-      const py = pinyin(kw.charAt(0), { pattern: 'first', toneType: 'none' }).toUpperCase();
-      const letter = /^[A-Z]$/.test(py) ? py : '#';
-      if (!groups[letter]) groups[letter] = [];
-      groups[letter].push(kw);
-    });
-    // 按字母顺序排序，# 放最后
-    return Object.entries(groups)
-      .sort(([a], [b]) => {
-        if (a === '#') return 1;
-        if (b === '#') return -1;
-        return a.localeCompare(b);
-      })
-      .map(([letter, kws]) => ({ letter, keywords: kws.sort((a, b) => a.localeCompare(b, 'zh-CN')) }));
-  }, [keywords]);
   const allUserColumns = [
     {
       title: '姓名', dataIndex: 'name', key: 'name',
@@ -179,9 +191,12 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
       ),
     },
     {
-      title: '操作', key: 'action', width: 150,
+      title: '操作', key: 'action', width: 220,
       render: (_: unknown, record: Partial<Doctor>) => (
         <Space>
+          <Button size="small" icon={<EyeIcon />} onClick={() => handleViewDetail(record)}>
+            查看
+          </Button>
           <Button type="primary" size="small" icon={<CheckOutlined />} onClick={() => record.id && onApprove(record.id)}>
             通过
           </Button>
@@ -254,39 +269,6 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
             </Card>
           </Col>
         </Row>
-
-        {/* 关键词管理 */}
-        <Card title={<><TagsOutlined style={{ color: '#1677ff', marginRight: 8 }} />关键词管理 <Tag color="blue">{keywords.length}</Tag></>} size="small" style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <Input
-              placeholder="输入新关键词"
-              value={newKeyword}
-              onChange={(e) => setNewKeyword(e.target.value)}
-              onPressEnter={addKeyword}
-              style={{ maxWidth: 300 }}
-            />
-            <Button type="primary" icon={<PlusOutlined />} onClick={addKeyword}>添加</Button>
-          </div>
-          {groupedKeywords.map((group) => (
-            <div key={group.letter} style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#1677ff', marginBottom: 6 }}>
-                {group.letter} <span style={{ color: '#999', fontWeight: 400 }}>({group.keywords.length})</span>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {group.keywords.map((kw) => (
-                  <Tag
-                    key={kw}
-                    closable
-                    onClose={(e) => { e.preventDefault(); removeKeyword(kw); }}
-                    style={{ marginBottom: 2, cursor: 'default' }}
-                  >
-                    {kw}
-                  </Tag>
-                ))}
-              </div>
-            </div>
-          ))}
-        </Card>
 
         {/* 用户管理 Tabs */}
         <Tabs defaultActiveKey="pending" size="small" items={[
@@ -372,6 +354,85 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
             <Input.Password prefix={<LockOutlined />} placeholder="再次输入新密码" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 用户详情审核弹窗 */}
+      <Modal
+        title={<span><EyeIcon style={{ color: '#1677ff', marginRight: 8 }} />注册信息审核</span>}
+        open={!!detailUser}
+        onCancel={() => setDetailUser(null)}
+        width={600}
+        footer={[
+          <Button key="reject" danger icon={<CloseOutlined />} onClick={() => { if (detailUser?.id) onReject(detailUser.id); setDetailUser(null); }}>
+            拒绝
+          </Button>,
+          <Button key="approve" type="primary" icon={<CheckOutlined />} onClick={() => { if (detailUser?.id) onApprove(detailUser.id); setDetailUser(null); }}>
+            通过
+          </Button>,
+        ]}
+      >
+        {detailUser && (
+          <div>
+            {/* 违规警告 */}
+            {detailViolations.length > 0 && (
+              <Alert
+                type="error"
+                showIcon
+                icon={<WarningOutlined />}
+                message="检测到疑似违规内容，请仔细审核！"
+                description={
+                  <div style={{ marginTop: 8 }}>
+                    {detailViolations.map((v, i) => (
+                      <div key={i} style={{ marginBottom: 4 }}>
+                        <strong>{v.field}：</strong>包含敏感词「{v.words.join('、')}」
+                      </div>
+                    ))}
+                  </div>
+                }
+                style={{ marginBottom: 16 }}
+              />
+            )}
+            {photoWarning && (
+              <Alert
+                type="warning"
+                showIcon
+                message="用户上传了外部链接照片，请人工核实图片内容是否合规"
+                style={{ marginBottom: 16 }}
+              />
+            )}
+            {detailViolations.length === 0 && !photoWarning && (
+              <Alert type="success" showIcon message="未检测到违规内容" style={{ marginBottom: 16 }} />
+            )}
+
+            <Descriptions column={2} bordered size="small">
+              <Descriptions.Item label="昵称">{detailUser.name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="真实姓名">{(detailUser as any).realName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="分类">{detailUser.category || '-'}</Descriptions.Item>
+              <Descriptions.Item label="职称">{detailUser.title || '-'}</Descriptions.Item>
+              <Descriptions.Item label="工作单位" span={2}>{detailUser.hospital || '-'}</Descriptions.Item>
+              <Descriptions.Item label="地区">{detailUser.province || ''} {detailUser.city || ''}</Descriptions.Item>
+              <Descriptions.Item label="联系电话">{detailUser.contact_phone || '-'}</Descriptions.Item>
+              <Descriptions.Item label="注册时间" span={2}>
+                {(detailUser as any).createdAt ? new Date((detailUser as any).createdAt).toLocaleString('zh-CN') : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="关键词" span={2}>
+                {detailUser.keywords?.map((k) => <Tag key={k} color="blue">{k}</Tag>) || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="自我介绍" span={2}>
+                <div style={{ whiteSpace: 'pre-wrap', maxHeight: 120, overflow: 'auto' }}>{detailUser.bio || '-'}</div>
+              </Descriptions.Item>
+              {((detailUser as any).photo) && (
+                <Descriptions.Item label="照片" span={2}>
+                  {((detailUser as any).photo as string).startsWith('data:image') ? (
+                    <img src={(detailUser as any).photo} alt="用户上传照片" style={{ maxWidth: 120, maxHeight: 120, borderRadius: 8 }} />
+                  ) : (
+                    <a href={(detailUser as any).photo} target="_blank" rel="noopener noreferrer">查看外部照片链接</a>
+                  )}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          </div>
+        )}
       </Modal>
     </div>
   );
