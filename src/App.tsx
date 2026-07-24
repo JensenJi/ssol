@@ -467,6 +467,7 @@ function App() {
             onGoUsers={() => setCurrentPage('users')}
             onLogout={handleLogout}
             ipLocation={ipLocation} isLoggedIn={isLoggedIn}
+            showSlogan={false}
           />
           <AdminLogin onBack={() => setCurrentPage('home')} onLogin={handleAdminLogin} />
         </>
@@ -482,6 +483,7 @@ function App() {
             onGoUsers={() => setCurrentPage('users')}
             onLogout={handleAdminLogout}
             ipLocation={ipLocation} isLoggedIn={true}
+            showSlogan={false}
           />
           <AdminDashboard onBack={() => setCurrentPage('home')} pendingUsers={pendingUsers} registeredUsers={registeredUsers} onApprove={handleApprove} onReject={handleReject} />
         </>

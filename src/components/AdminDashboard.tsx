@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Card, Row, Col, Statistic, Table, Tag, Button, Typography, Space, Input, Tabs, Modal, Form, message, Descriptions, Alert } from 'antd';
 import {
-  DashboardOutlined, UserAddOutlined, EyeOutlined,
+  DashboardOutlined, UserAddOutlined, UserOutlined, EyeOutlined,
   SafetyCertificateOutlined,
   CheckOutlined, CloseOutlined,
   KeyOutlined, LockOutlined, EyeOutlined as EyeIcon,
-  WarningOutlined,
+  WarningOutlined, EditOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
 
@@ -78,7 +78,9 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
   const [detailViolations, setDetailViolations] = useState<{ field: string; words: string[] }[]>([]);
   const [photoWarning, setPhotoWarning] = useState(false);
   const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
-  const [keywordSearch, setKeywordSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('pending');
+  const [editUser, setEditUser] = useState<Partial<Doctor> | null>(null);
+  const [editForm] = Form.useForm();
 
   const handleViewDetail = (user: Partial<Doctor>) => {
     setDetailUser(user);
@@ -131,7 +133,9 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
   const allUserColumns = [
     {
       title: '姓名', dataIndex: 'name', key: 'name',
-      render: (name: string) => <strong>{name || '未命名'}</strong>,
+      render: (name: string, record: Partial<Doctor>) => (
+        <a onClick={() => handleEditUser(record)} style={{ fontWeight: 700 }}>{name || '未命名'}</a>
+      ),
     },
     {
       title: '状态', key: 'status',
@@ -190,12 +194,78 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
       .sort((a, b) => b.count - a.count);
   }, [allUsers]);
 
-  // 过滤关键词列表
-  const filteredKeywords = useMemo(() => {
-    if (!keywordSearch) return keywordMap;
-    const kw = keywordSearch.toLowerCase();
-    return keywordMap.filter((k) => k.keyword.toLowerCase().includes(kw));
-  }, [keywordMap, keywordSearch]);
+  // 关键词列表（直接显示全部，无搜索框）
+  const filteredKeywords = keywordMap;
+
+  const handleEditUser = (user: Partial<Doctor>) => {
+    setEditUser(user);
+    editForm.setFieldsValue({
+      name: user.name,
+      category: user.category,
+      hospital: user.hospital,
+      title: user.title,
+      province: user.province,
+      city: user.city,
+      contact_phone: user.contact_phone,
+      bio: user.bio,
+      keywords: user.keywords?.join('、') || '',
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      const values = await editForm.validateFields();
+      if (!editUser?.id) return;
+      const updated = {
+        ...editUser,
+        name: values.name,
+        category: values.category,
+        hospital: values.hospital,
+        title: values.title,
+        province: values.province,
+        city: values.city,
+        contact_phone: values.contact_phone,
+        bio: values.bio,
+        keywords: values.keywords ? values.keywords.split(/[,，、\s]+/).filter(Boolean) : [],
+      };
+      // 更新本地存储
+      const updateList = (list: Partial<Doctor>[]) =>
+        list.map((u) => (u.id === editUser.id ? updated : u));
+      // 通过回调通知父组件更新（这里直接操作localStorage）
+      const allStored = [
+        ...JSON.parse(localStorage.getItem('ssol_registeredUsers') || '[]'),
+        ...JSON.parse(localStorage.getItem('ssol_pendingUsers') || '[]'),
+      ];
+      const idx = allStored.findIndex((u: any) => u.id === editUser.id);
+      if (idx >= 0) {
+        allStored[idx] = updated;
+        localStorage.setItem('ssol_registeredUsers', JSON.stringify(allStored.filter((u: any) => u.verified)));
+        localStorage.setItem('ssol_pendingUsers', JSON.stringify(allStored.filter((u: any) => !u.verified)));
+      }
+      message.success('用户信息已更新');
+      setEditUser(null);
+      // 强制刷新页面数据
+      window.location.reload();
+    } catch { /* ignore */ }
+  };
+
+  const handleDeleteUser = (user: Partial<Doctor>) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除用户「${user.name}」吗？此操作不可恢复。`,
+      okText: '确认删除',
+      okType: 'danger',
+      onOk: () => {
+        if (!user.id) return;
+        const reg = JSON.parse(localStorage.getItem('ssol_registeredUsers') || '[]').filter((u: any) => u.id !== user.id);
+        const pend = JSON.parse(localStorage.getItem('ssol_pendingUsers') || '[]').filter((u: any) => u.id !== user.id);
+        localStorage.setItem('ssol_registeredUsers', JSON.stringify(reg));
+        localStorage.setItem('ssol_pendingUsers', JSON.stringify(pend));
+        message.success('用户已删除');
+        window.location.reload();
+      },
+    });
+  };
 
   // 选中关键词对应的用户
   const keywordUsers = useMemo(() => {
@@ -307,7 +377,7 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
         </Row>
 
         {/* 用户管理 Tabs */}
-        <Tabs defaultActiveKey="pending" size="small" items={[
+        <Tabs activeKey={activeTab} onChange={setActiveTab} size="small" items={[
           {
             key: 'pending',
             label: `待审核 (${pendingUsers.length})`,
@@ -359,13 +429,6 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
                   </div>
                 ) : (
                   <div>
-                    <Input.Search
-                      placeholder="搜索关键词..."
-                      value={keywordSearch}
-                      onChange={(e) => setKeywordSearch(e.target.value)}
-                      allowClear
-                      style={{ marginBottom: 12, maxWidth: 300 }}
-                    />
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {filteredKeywords.map((kw) => (
                         <Tag
@@ -388,6 +451,8 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
           },
         ]} style={{ marginBottom: 24 }} />
 
+        {/* 设备分布和访客地区 - 仅在待审核/所有用户页显示 */}
+        {(activeTab === 'pending' || activeTab === 'all') && (
         <Row gutter={[12, 12]}>
           <Col xs={24} md={12}>
             <Card title="设备分布" size="small" style={{ marginBottom: 16 }}>
@@ -418,6 +483,7 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
             </Card>
           </Col>
         </Row>
+        )}
       </div>
 
       {/* 修改密码弹窗 */}
@@ -518,6 +584,73 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
               )}
             </Descriptions>
           </div>
+        )}
+      </Modal>
+
+      {/* 编辑用户信息弹窗 */}
+      <Modal
+        title={<span><EditOutlined style={{ color: '#1677ff', marginRight: 8 }} />编辑用户信息</span>}
+        open={!!editUser}
+        onCancel={() => { setEditUser(null); editForm.resetFields(); }}
+        width={560}
+        footer={[
+          <Button key="delete" danger icon={<DeleteOutlined />} onClick={() => { if (editUser) handleDeleteUser(editUser); setEditUser(null); }}>
+            删除用户
+          </Button>,
+          <Button key="cancel" onClick={() => { setEditUser(null); editForm.resetFields(); }}>取消</Button>,
+          <Button key="save" type="primary" icon={<CheckOutlined />} onClick={handleSaveEdit}>保存</Button>,
+        ]}
+      >
+        {editUser && (
+          <Form form={editForm} layout="vertical" size="large" style={{ paddingTop: 8 }}>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="name" label="昵称" rules={[{ required: true, message: '请输入昵称' }]}>
+                  <Input prefix={<UserOutlined />} placeholder="昵称" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="category" label="分类">
+                  <Input placeholder="如：医生、非遗手艺" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="title" label="职称">
+                  <Input placeholder="如：主任医师" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="hospital" label="工作单位">
+                  <Input placeholder="工作单位" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item name="province" label="省">
+                  <Input placeholder="省" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="city" label="市">
+                  <Input placeholder="市" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="contact_phone" label="联系电话">
+                  <Input placeholder="电话" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item name="keywords" label="关键词">
+              <Input placeholder="用空格或顿号分隔" />
+            </Form.Item>
+            <Form.Item name="bio" label="自我介绍">
+              <Input.TextArea rows={3} placeholder="自我介绍" />
+            </Form.Item>
+          </Form>
         )}
       </Modal>
     </div>

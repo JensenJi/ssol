@@ -25,9 +25,10 @@ interface NavbarProps {
   ipLocation?: { name: string; lat: number; lng: number } | null;
   isLoggedIn?: boolean;
   onGoHome?: () => void;
+  showSlogan?: boolean;
 }
 
-export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, onGoLogin, onGoAdmin, onGoPersonal, onGoUsers, onLogout, ipLocation, isLoggedIn, onGoHome }: NavbarProps) {
+export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, onGoLogin, onGoAdmin, onGoPersonal, onGoUsers, onLogout, ipLocation, isLoggedIn, onGoHome, showSlogan = true }: NavbarProps) {
   const [keyword, setKeyword] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogKeyword, setDialogKeyword] = useState('');
@@ -70,7 +71,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
             <span className="logo-text logo-drive-in">搜索在线</span>
             <span className="logo-url">https://www.ssol.cn</span>
           </div>
-          <span className="logo-slogan">搜索在线，你手上的大型人才库。</span>
+          {showSlogan && <span className="logo-slogan">搜索在线，你手上的大型人才库。</span>}
         </div>
         <div className="navbar-center">
           <div className="navbar-search">
