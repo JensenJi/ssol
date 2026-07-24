@@ -122,7 +122,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
             <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>
               <EnvironmentOutlined style={{ color: '#1677ff', marginRight: 4 }} />
               我的位置
-              {ipLocation && <span style={{ fontWeight: 400, color: '#52c41a', marginLeft: 8, fontSize: 12 }}>● 已自动定位</span>}
+              {ipLocation && <span style={{ fontWeight: 400, color: '#52c41a', marginLeft: 8, fontSize: 12 }}>● 已定位</span>}
             </div>
             {ipLocation ? (
               <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6, padding: '10px 14px', fontSize: 14 }}>

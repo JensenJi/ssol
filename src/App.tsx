@@ -251,6 +251,8 @@ function App() {
     // 如果有有效坐标（非0非-1），直接使用
     if (loc.lat > 0 && loc.lng > 0) {
       setUserLocation({ lat: loc.lat, lng: loc.lng });
+      // 同步更新 ipLocation，让搜索弹窗显示纠正后的位置
+      setIpLocation({ name: loc.name, lat: loc.lat, lng: loc.lng });
     } else if (loc.name) {
       // 手动位置：通过Nominatim地理编码获取坐标（带超时保护）
       const controller = new AbortController();
@@ -265,12 +267,15 @@ function App() {
             const newLng = parseFloat(data[0].lon);
             if (!isNaN(newLat) && !isNaN(newLng)) {
               setUserLocation({ lat: newLat, lng: newLng });
+              // 同步更新 ipLocation，让搜索弹窗显示纠正后的位置
+              setIpLocation({ name: loc.name, lat: newLat, lng: newLng });
             }
           }
         })
         .catch(() => {
           clearTimeout(timeoutId);
-          // 地理编码失败，保持当前位置不变
+          // 地理编码失败，仍然显示用户纠正的位置名称
+          setIpLocation({ name: loc.name, lat: 0, lng: 0 });
           console.log('地理编码失败，使用位置名称:', loc.name);
         });
     }
