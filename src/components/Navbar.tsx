@@ -17,6 +17,7 @@ interface NavbarProps {
   onLocationUpdate?: (location: { lat: number; lng: number; name: string }) => void;
   onDistanceSelect?: (distance: number) => void;
   onGoRegister?: () => void;
+  onGoLogin?: () => void;
   onGoAdmin?: () => void;
   onGoPersonal?: () => void;
   onGoUsers?: () => void;
@@ -26,11 +27,12 @@ interface NavbarProps {
   onGoHome?: () => void;
 }
 
-export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, onGoAdmin, onGoPersonal, onGoUsers, onLogout, ipLocation, isLoggedIn, onGoHome }: NavbarProps) {
+export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, onGoLogin, onGoAdmin, onGoPersonal, onGoUsers, onLogout, ipLocation, isLoggedIn, onGoHome }: NavbarProps) {
   const [keyword, setKeyword] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogKeyword, setDialogKeyword] = useState('');
   const [dialogDistance, setDialogDistance] = useState(99999);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   // 手动更正位置
   const [manualProvince, setManualProvince] = useState('');
   const [manualCity, setManualCity] = useState('');
@@ -77,13 +79,10 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
               onChange={(e) => setKeyword(e.target.value)}
               onKeyPress={handleKeyPress}
               onClick={handleSearchClick}
-              style={{ width: 400, borderRadius: 8, cursor: 'pointer' }}
+              style={{ width: 480, borderRadius: 8, cursor: 'pointer' }}
               allowClear
               readOnly
             />
-            <Button type="primary" size="large" onClick={handleSearchClick} style={{ marginLeft: 8, borderRadius: 20, height: 40, padding: '0 24px' }}>
-              搜索
-            </Button>
           </div>
           <div className="navbar-actions">
             <Space size={8}>
@@ -96,7 +95,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
                   <Button type="primary" danger icon={<LogoutOutlined />} onClick={onLogout} className="nav-btn nav-btn-logout">退出</Button>
                 </>
               ) : (
-                <Button type="primary" icon={<UserAddOutlined />} onClick={onGoRegister} className="nav-btn">注册/登录</Button>
+                <Button type="primary" icon={<UserAddOutlined />} onClick={() => setAuthModalOpen(true)} className="nav-btn">注册/登录</Button>
               )}
             </Space>
           </div>
@@ -176,6 +175,39 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
               options={distanceData}
             />
           </div>
+        </div>
+      </Modal>
+
+      {/* 注册/登录选择弹窗 */}
+      <Modal
+        open={authModalOpen}
+        onCancel={() => setAuthModalOpen(false)}
+        footer={null}
+        width={360}
+        title={null}
+      >
+        <div style={{ textAlign: 'center', padding: '20px 0 10px' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 24 }}>请选择</div>
+          <div style={{ display: 'flex', gap: 24, justifyContent: 'center' }}>
+            <Button
+              type="primary"
+              size="large"
+              icon={<UserAddOutlined />}
+              onClick={() => { setAuthModalOpen(false); onGoRegister?.(); }}
+              style={{ width: 120, height: 48, fontSize: 16, borderRadius: 8 }}
+            >
+              注册
+            </Button>
+            <Button
+              size="large"
+              icon={<UserOutlined />}
+              onClick={() => { setAuthModalOpen(false); onGoLogin?.(); }}
+              style={{ width: 120, height: 48, fontSize: 16, borderRadius: 8 }}
+            >
+              登录
+            </Button>
+          </div>
+          <div style={{ fontSize: 12, color: '#999', marginTop: 16 }}>注册过的用户请直接登录，无需重复注册</div>
         </div>
       </Modal>
     </>

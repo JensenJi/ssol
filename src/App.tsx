@@ -211,6 +211,22 @@ function App() {
     if (favTarget) { setFavorites((prev) => [...prev, favTarget.id]); message.success(`已收藏 ${favTarget.name}`); setFavTarget(null); }
   }, [favTarget, currentUser]);
 
+  // 导航栏登录按钮：直接登录
+  const handleNavLogin = useCallback(() => {
+    setIsLoggedIn(true);
+    if (!currentUser) {
+      const defaultUser: Partial<Doctor> = {
+        id: `user-${Date.now()}`,
+        name: '我的昵称',
+        keywords: [],
+        likes: 0,
+        verified: false,
+      };
+      setCurrentUser(defaultUser);
+    }
+    message.success('登录成功');
+  }, [currentUser]);
+
   const allKeywords = useMemo(() => {
     const freqMap = new Map<string, number>();
     experts.forEach((d) => d.keywords.forEach((k) => freqMap.set(k, (freqMap.get(k) || 0) + 1)));
@@ -406,7 +422,7 @@ function App() {
         <div className="app">
           <Navbar
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
-            onGoRegister={() => setCurrentPage('register')}
+            onGoRegister={() => setCurrentPage('register')} onGoLogin={handleNavLogin}
             onGoHome={() => setCurrentPage('home')}
             onGoAdmin={() => setCurrentPage('adminLogin')}
             onGoPersonal={() => setCurrentPage('personal')}
