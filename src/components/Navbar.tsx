@@ -79,7 +79,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
               onChange={(e) => setKeyword(e.target.value)}
               onKeyPress={handleKeyPress}
               onClick={handleSearchClick}
-              style={{ width: 480, borderRadius: 8, cursor: 'pointer' }}
+              style={{ width: 240, borderRadius: 8, cursor: 'pointer' }}
               allowClear
               readOnly
             />

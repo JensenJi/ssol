@@ -77,6 +77,8 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
   const [detailUser, setDetailUser] = useState<Partial<Doctor> | null>(null);
   const [detailViolations, setDetailViolations] = useState<{ field: string; words: string[] }[]>([]);
   const [photoWarning, setPhotoWarning] = useState(false);
+  const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
+  const [keywordSearch, setKeywordSearch] = useState('');
 
   const handleViewDetail = (user: Partial<Doctor>) => {
     setDetailUser(user);
@@ -167,6 +169,40 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
     pendingUsers.forEach((u) => { if (!map.has(u.id!)) map.set(u.id!, u); });
     return Array.from(map.values());
   }, [registeredUsers, pendingUsers]);
+
+  // 关键词收录：从所有用户中提取关键词，按频率排序
+  const keywordMap = useMemo(() => {
+    const map = new Map<string, { count: number; users: Partial<Doctor>[] }>();
+    allUsers.forEach((u) => {
+      if (u.keywords) {
+        u.keywords.forEach((kw) => {
+          const entry = map.get(kw) || { count: 0, users: [] };
+          entry.count++;
+          if (!entry.users.find((x) => x.id === u.id)) {
+            entry.users.push(u);
+          }
+          map.set(kw, entry);
+        });
+      }
+    });
+    return Array.from(map.entries())
+      .map(([keyword, data]) => ({ keyword, ...data }))
+      .sort((a, b) => b.count - a.count);
+  }, [allUsers]);
+
+  // 过滤关键词列表
+  const filteredKeywords = useMemo(() => {
+    if (!keywordSearch) return keywordMap;
+    const kw = keywordSearch.toLowerCase();
+    return keywordMap.filter((k) => k.keyword.toLowerCase().includes(kw));
+  }, [keywordMap, keywordSearch]);
+
+  // 选中关键词对应的用户
+  const keywordUsers = useMemo(() => {
+    if (!selectedKeyword) return [];
+    const entry = keywordMap.find((k) => k.keyword === selectedKeyword);
+    return entry?.users || [];
+  }, [selectedKeyword, keywordMap]);
 
   const pendingColumns = [
     {
@@ -298,6 +334,56 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
                 scroll={{ x: 800 }}
                 locale={{ emptyText: '暂无注册用户' }}
               />
+            ),
+          },
+          {
+            key: 'keywords',
+            label: `关键词收录 (${keywordMap.length})`,
+            children: (
+              <div>
+                {selectedKeyword ? (
+                  <div>
+                    <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Button size="small" onClick={() => setSelectedKeyword(null)}>← 返回关键词列表</Button>
+                      <Tag color="blue" style={{ fontSize: 14, padding: '4px 12px' }}>{selectedKeyword}</Tag>
+                      <span style={{ color: '#666', fontSize: 13 }}>共 {keywordUsers.length} 位用户使用此关键词</span>
+                    </div>
+                    <Table
+                      columns={allUserColumns}
+                      dataSource={keywordUsers.map((u, i) => ({ ...u, key: u.id || `kw-user-${i}` }))}
+                      pagination={{ pageSize: 10 }}
+                      size="small"
+                      scroll={{ x: 800 }}
+                      locale={{ emptyText: '暂无用户' }}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <Input.Search
+                      placeholder="搜索关键词..."
+                      value={keywordSearch}
+                      onChange={(e) => setKeywordSearch(e.target.value)}
+                      allowClear
+                      style={{ marginBottom: 12, maxWidth: 300 }}
+                    />
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {filteredKeywords.map((kw) => (
+                        <Tag
+                          key={kw.keyword}
+                          color="blue"
+                          style={{ cursor: 'pointer', fontSize: 13, padding: '4px 12px' }}
+                          onClick={() => setSelectedKeyword(kw.keyword)}
+                        >
+                          {kw.keyword} <span style={{ color: '#999', fontSize: 11 }}>({kw.count})</span>
+                        </Tag>
+                      ))}
+                    </div>
+                    {filteredKeywords.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>暂无关键词数据</div>
+                    )}
+                  </div>
+                )}
+              </div>
             ),
           },
         ]} style={{ marginBottom: 24 }} />

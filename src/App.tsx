@@ -42,6 +42,9 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return localStorage.getItem('ssol_loggedIn') === 'true';
   });
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
+    return localStorage.getItem('ssol_adminLoggedIn') === 'true';
+  });
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [favTarget, setFavTarget] = useState<Doctor | null>(null);
   const [deviceInfo] = useState(detectDeviceInfo);
@@ -68,6 +71,9 @@ function App() {
   useEffect(() => {
     localStorage.setItem('ssol_loggedIn', String(isLoggedIn));
   }, [isLoggedIn]);
+  useEffect(() => {
+    localStorage.setItem('ssol_adminLoggedIn', String(isAdminLoggedIn));
+  }, [isAdminLoggedIn]);
   useEffect(() => {
     if (currentUser) localStorage.setItem('ssol_currentUser', JSON.stringify(currentUser));
     else localStorage.removeItem('ssol_currentUser');
@@ -111,15 +117,35 @@ function App() {
     setLocationName('北京');
     setUserLocation({ lat: 39.9042, lng: 116.4074 });
 
-    // 通过IP自动定位（带超时）
+    // 通过IP自动定位（多API备用，带超时）
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-    fetch('https://ipapi.co/json/', { signal: controller.signal })
+    // 优先使用 ipinfo.io（对中国IP更准确）
+    fetch('https://ipinfo.io/json?token=', { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
         clearTimeout(timeoutId);
-        if (data.latitude && data.longitude) {
+        if (data.loc) {
+          const [lat, lng] = data.loc.split(',').map(Number);
+          // ipinfo 的 region 是省份，city 是城市
+          const name = [data.region, data.city].filter(Boolean).join(' ');
+          if (lat && lng) {
+            setIpLocation({ name: name || '北京', lat, lng });
+            setUserLocation({ lat, lng });
+            setLocationName(name || '北京');
+            return;
+          }
+        }
+        // ipinfo 失败，尝试 ipapi.co
+        return fetch('https://ipapi.co/json/', { signal: controller.signal });
+      })
+      .then((res) => {
+        if (!res) return;
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.latitude && data.longitude) {
           const name = [data.region, data.city, data.district].filter(Boolean).join(' ');
           setIpLocation({ name, lat: data.latitude, lng: data.longitude });
           setUserLocation({ lat: data.latitude, lng: data.longitude });
@@ -128,11 +154,23 @@ function App() {
       })
       .catch(() => {
         clearTimeout(timeoutId);
-        // IP定位失败，尝试GPS
+        // IP定位全部失败，尝试GPS
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (pos) => {
               setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+              // 反向地理编码获取地名
+              fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=zh`)
+                .then((r) => r.json())
+                .then((d) => {
+                  const addr = d.address || {};
+                  const name = [addr.state, addr.city || addr.town || addr.county, addr.suburb || addr.district].filter(Boolean).join(' ');
+                  if (name) {
+                    setIpLocation({ name, lat: pos.coords.latitude, lng: pos.coords.longitude });
+                    setLocationName(name);
+                  }
+                })
+                .catch(() => {});
             },
             () => { /* 用户拒绝定位，使用默认北京 */ }
           );
@@ -315,7 +353,15 @@ function App() {
   }, []);
 
   const handleAdminLogin = useCallback(() => {
+    setIsAdminLoggedIn(true);
     setCurrentPage('admin');
+  }, []);
+
+  const handleAdminLogout = useCallback(() => {
+    setIsAdminLoggedIn(false);
+    setCurrentPage('home');
+    localStorage.removeItem('ssol_adminLoggedIn');
+    message.success('已退出管理后台');
   }, []);
 
   const handleMarkerClick = useCallback((doctor: Doctor) => { setSelectedDoctor(doctor); setProfileOpen(true); }, []);
@@ -394,7 +440,7 @@ function App() {
           currentUser={currentUser}
         />
       )}
-      {currentPage === 'adminLogin' && (
+      {currentPage === 'adminLogin' && !isAdminLoggedIn && (
         <>
           <Navbar
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
@@ -406,14 +452,14 @@ function App() {
           <AdminLogin onBack={() => setCurrentPage('home')} onLogin={handleAdminLogin} />
         </>
       )}
-      {currentPage === 'admin' && (
+      {currentPage === 'admin' && isAdminLoggedIn && (
         <>
           <Navbar
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
             onGoRegister={() => {}} onGoHome={() => setCurrentPage('home')}
             ipLocation={ipLocation} isLoggedIn={true}
-            onGoAdmin={() => setCurrentPage('adminLogin')}
-            onLogout={handleLogout}
+            onGoAdmin={() => setCurrentPage('admin')}
+            onLogout={handleAdminLogout}
           />
           <AdminDashboard onBack={() => setCurrentPage('home')} pendingUsers={pendingUsers} registeredUsers={registeredUsers} onApprove={handleApprove} onReject={handleReject} />
         </>
