@@ -470,37 +470,50 @@ function App() {
     setTableExpanded(true);
   }, []);
 
-  // 表格拖拽调整高度：上拉不限高度，下拉最小留一行(~40px)
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
+  // 表格拖拽调整高度：支持鼠标和触摸（手机）
+  const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const startY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
     const startH = tableExpanded ? tableHeight : 40;
-    // 用ref存储初始状态，避免闭包捕获过期值
-    dragRef.current = { startY: e.clientY, startHeight: startH, wasExpanded: tableExpanded };
-    const handleMouseMove = (ev: MouseEvent) => {
+    dragRef.current = { startY, startHeight: startH, wasExpanded: tableExpanded };
+    const isTouch = 'touches' in e;
+
+    const handleMove = (clientY: number) => {
       if (!dragRef.current) return;
-      const delta = dragRef.current.startY - ev.clientY;
+      const delta = dragRef.current.startY - clientY;
       const newHeight = Math.max(40, dragRef.current.startHeight + delta);
       setTableHeight(newHeight);
-      // 用ref中的初始状态判断，而非闭包中的过期state
-      if (!dragRef.current.wasExpanded && newHeight > 50) {
-        setTableExpanded(true);
-      }
-      if (dragRef.current.wasExpanded && newHeight <= 45) {
-        setTableExpanded(false);
-      }
+      if (!dragRef.current.wasExpanded && newHeight > 50) setTableExpanded(true);
+      if (dragRef.current.wasExpanded && newHeight <= 45) setTableExpanded(false);
     };
-    const handleMouseUp = () => {
-      dragRef.current = null;
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.body.style.cursor = 'ns-resize';
-    document.body.style.userSelect = 'none';
+
+    if (isTouch) {
+      const onTouchMove = (ev: TouchEvent) => {
+        ev.preventDefault();
+        handleMove(ev.touches[0].clientY);
+      };
+      const onTouchEnd = () => {
+        dragRef.current = null;
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onTouchEnd);
+      };
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      document.addEventListener('touchend', onTouchEnd);
+    } else {
+      const onMouseMove = (ev: MouseEvent) => handleMove(ev.clientY);
+      const onMouseUp = () => {
+        dragRef.current = null;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+    }
   }, [tableHeight, tableExpanded]);
 
   return (
@@ -594,7 +607,7 @@ function App() {
           </div>
           {/* 结果列表 */}
           <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={{ height: tableExpanded ? tableHeight : 40 }}>
-            <div className="drag-handle" onMouseDown={handleDragStart} title="拖动调整列表高度">
+            <div className="drag-handle" onMouseDown={handleDragStart} onTouchStart={handleDragStart} title="拖动调整列表高度">
               <span style={{ fontSize: 11, color: '#999', userSelect: 'none' }}>{tableExpanded ? '▼ 收起列表' : '▲ 展开列表'}</span>
             </div>
             {tableExpanded && (

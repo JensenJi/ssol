@@ -65,6 +65,7 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
   justify-content: center;
   border-top: 2px solid #e8e8e8;
   flex-shrink: 0;
+  touch-action: none;
 }
 .drag-handle::after {
   content: '';
@@ -334,7 +335,7 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
   .ant-table-cell { 
     padding: 6px 8px !important; 
   }
-  .drag-handle { height: 14px !important; background: #f0f0f0; }
+  .drag-handle { height: 22px !important; background: #f0f0f0; cursor: grab; touch-action: none; }
   .drag-handle::after { width: 80px; height: 5px; background: #1677ff; border-radius: 3px; }
 }
 
