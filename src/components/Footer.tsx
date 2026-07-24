@@ -1,5 +1,3 @@
-import { PhoneOutlined, MailOutlined } from '@ant-design/icons';
-
 interface FooterProps {
   onGoHome?: () => void;
   onGoRegister?: () => void;
@@ -25,12 +23,8 @@ export default function Footer({ onGoHome, onGoRegister }: FooterProps) {
 
         {/* 右：联系 + 友链 */}
         <div className="footer-col footer-col-right">
-          <div className="footer-contact-row">
-            <PhoneOutlined style={{ fontSize: 13, marginRight: 4 }} /> 电 话：19206261356
-          </div>
-          <div className="footer-contact-row">
-            <MailOutlined style={{ fontSize: 13, marginRight: 4 }} /> 邮 箱：admin@ssol.cn
-          </div>
+          <div className="footer-contact-row">电话：19206261356</div>
+          <div className="footer-contact-row">邮箱：admin@ssol.cn</div>
           <div className="footer-friend-links">
             友情链接：
             <a href="https://jensenji.cn" target="_blank" rel="noopener noreferrer" className="footer-friend-link">jensenji.cn</a>
