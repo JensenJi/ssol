@@ -1,11 +1,10 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ConfigProvider, message, Modal, Button } from 'antd';
-import { LoginOutlined, UpOutlined, TableOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { LoginOutlined, TableOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
 import Navbar from './components/Navbar';
 import MapContainer from './components/MapContainer';
 import ResultTable from './components/ResultTable';
-import Sidebar from './components/Sidebar';
 import UserProfile from './components/UserProfile';
 import RegisterPage from './components/RegisterPage';
 import AdminDashboard from './components/AdminDashboard';
@@ -47,7 +46,6 @@ function App() {
   const [experts, setExperts] = useState<Doctor[]>(mockDoctors.filter(d => d.verified));
   const [tableExpanded, setTableExpanded] = useState(false);
   const [tableHeight, setTableHeight] = useState(200);
-  const [sidebarVisible, setSidebarVisible] = useState(false);
   const [ipLocation, setIpLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const dragRef = useRef<{ startY: number; startHeight: number; wasExpanded: boolean } | null>(null);
 
@@ -234,7 +232,6 @@ function App() {
 
   const handleMarkerClick = useCallback((doctor: Doctor) => { setSelectedDoctor(doctor); setProfileOpen(true); }, []);
   const handleKeywordClick = useCallback((keyword: string) => {
-    // 先关闭个人主页弹窗，避免遮挡搜索结果
     setProfileOpen(false);
     setSelectedDoctor(null);
     setSearchKeyword(keyword);
@@ -319,35 +316,14 @@ function App() {
             ipLocation={ipLocation} isLoggedIn={isLoggedIn}
           />
         <div className="main-content">
-          <div className={`content-left ${sidebarVisible ? '' : 'full-width'}`}>
+          <div className="content-left full-width">
             <MapContainer
               doctors={filteredDoctors} selectedDoctor={selectedDoctor} userLocation={userLocation}
               locationName={locationName}
               onMapClick={handleMapClick} onMarkerClick={handleMarkerClick} onLocationName={handleLocationName}
             />
           </div>
-          {sidebarVisible && (
-            <div className="content-right">
-              <Sidebar
-                allKeywords={allKeywords}
-                onKeywordClick={handleKeywordClick}
-                onDoctorClick={handleMarkerClick}
-                currentKeyword={searchKeyword}
-              />
-            </div>
-          )}
-          {/* 侧栏开关按钮 */}
-          {!sidebarVisible && (
-            <div className="show-sidebar-btn" onClick={() => setSidebarVisible(true)} title="显示关键词侧栏">
-              <LeftOutlined />
-            </div>
-          )}
-          {sidebarVisible && (
-            <div className="hide-sidebar-btn" onClick={() => setSidebarVisible(false)} title="隐藏关键词栏">
-              <RightOutlined />
-            </div>
-          )}
-          {/* 结果列表 - 在main-content层级，绝对定位，始终浮在关键词之上 */}
+          {/* 结果列表 */}
           <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={{ height: tableExpanded ? tableHeight : 40 }}>
             <div className="drag-handle" onMouseDown={handleDragStart} title="拖动调整列表高度" />
             {tableExpanded && (

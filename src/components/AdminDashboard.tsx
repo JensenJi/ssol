@@ -1,8 +1,9 @@
-import { Card, Row, Col, Statistic, Table, Tag, Button, Typography, Space } from 'antd';
+import { useState, useMemo } from 'react';
+import { Card, Row, Col, Statistic, Table, Tag, Button, Typography, Space, Input, Divider } from 'antd';
 import {
   DashboardOutlined, UserAddOutlined, EyeOutlined,
-  SafetyCertificateOutlined,
-  CheckOutlined, CloseOutlined,
+  SafetyCertificateOutlined, TagsOutlined,
+  CheckOutlined, CloseOutlined, PlusOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
 
@@ -46,6 +47,43 @@ const regionStats = [
 ];
 
 export default function AdminDashboard({ onBack, pendingUsers, onApprove, onReject }: AdminDashboardProps) {
+  const [keywords, setKeywords] = useState<string[]>([
+    '渐冻症', '运动神经元病', '罕见神经疾病', '法洛四联症', '先天性心脏畸形', '大动脉转位',
+    '陶瓷修复', '古瓷鉴损', '锔瓷', '苗药浴', '瑶医火功', '民族医药', '陨石鉴定', '矿石分析',
+    '地质勘探', '果树嫁接', '柑橘黄龙病', '果树急救', '维语翻译', '古丝绸之路文献', '中亚语言',
+    '冰川潜水', '洞穴探险救援', '深水打捞', '古琴修复', '斫琴', '丝弦制作', '冰川退缩研究',
+    '冻土工程', '极地科考', '假肢矫形', '仿生义肢', '步态分析', '尼曼匹克病', '戈谢病',
+    '溶酶体贮积症', '船舶堵漏', '水下焊接', '沉船打捞', '壮锦织造', '侗族大歌', '非遗手工艺',
+    '高压线带电作业', '特高压检修', '电力抢险', '皮影戏', '景泰蓝', '苏绣', '漆器', '剪纸', '泥塑', '木雕',
+    '银饰锻造', '扎染', '蜡染', '油纸伞', '竹编', '土陶',
+  ]);
+  const [newKeyword, setNewKeyword] = useState('');
+
+  const addKeyword = () => {
+    if (newKeyword.trim() && !keywords.includes(newKeyword.trim())) {
+      setKeywords([...keywords, newKeyword.trim()]);
+      setNewKeyword('');
+    }
+  };
+
+  const removeKeyword = (kw: string) => {
+    setKeywords(keywords.filter((k) => k !== kw));
+  };
+
+  // 按拼音首字母分组排序
+  const groupedKeywords = useMemo(() => {
+    const groups: Record<string, string[]> = {};
+    keywords.forEach((kw) => {
+      // 简单按 Unicode 编码排序（中文按拼音近似）
+      const firstChar = kw.charAt(0);
+      if (!groups[firstChar]) groups[firstChar] = [];
+      groups[firstChar].push(kw);
+    });
+    // 按首字符排序
+    return Object.entries(groups)
+      .sort(([a], [b]) => a.localeCompare(b, 'zh-CN'))
+      .map(([letter, kws]) => ({ letter, keywords: kws.sort((a, b) => a.localeCompare(b, 'zh-CN')) }));
+  }, [keywords]);
   const pendingColumns = [
     {
       title: '姓名', dataIndex: 'name', key: 'name',
@@ -136,6 +174,39 @@ export default function AdminDashboard({ onBack, pendingUsers, onApprove, onReje
             </Card>
           </Col>
         </Row>
+
+        {/* 关键词管理 */}
+        <Card title={<><TagsOutlined style={{ color: '#1677ff', marginRight: 8 }} />关键词管理 <Tag color="blue">{keywords.length}</Tag></>} size="small" style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <Input
+              placeholder="输入新关键词"
+              value={newKeyword}
+              onChange={(e) => setNewKeyword(e.target.value)}
+              onPressEnter={addKeyword}
+              style={{ maxWidth: 300 }}
+            />
+            <Button type="primary" icon={<PlusOutlined />} onClick={addKeyword}>添加</Button>
+          </div>
+          {groupedKeywords.map((group) => (
+            <div key={group.letter} style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#1677ff', marginBottom: 6 }}>
+                {group.letter} <span style={{ color: '#999', fontWeight: 400 }}>({group.keywords.length})</span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {group.keywords.map((kw) => (
+                  <Tag
+                    key={kw}
+                    closable
+                    onClose={(e) => { e.preventDefault(); removeKeyword(kw); }}
+                    style={{ marginBottom: 2, cursor: 'default' }}
+                  >
+                    {kw}
+                  </Tag>
+                ))}
+              </div>
+            </div>
+          ))}
+        </Card>
 
         <Row gutter={[12, 12]}>
           {/* 待审核列表 */}

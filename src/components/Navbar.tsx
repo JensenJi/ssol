@@ -78,17 +78,17 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
               allowClear
               readOnly
             />
-            <Button type="primary" size="large" onClick={handleSearchClick} style={{ marginLeft: 8, borderRadius: 8 }}>
+            <Button type="primary" size="large" onClick={handleSearchClick} style={{ marginLeft: 8, borderRadius: 20, height: 40, padding: '0 24px' }}>
               搜索
             </Button>
           </div>
           <div className="navbar-actions">
-            <Space>
-              <Button type="link" icon={<HomeOutlined />} onClick={onGoHome}>首页</Button>
+            <Space size={4}>
+              <Button type="text" icon={<HomeOutlined />} onClick={onGoHome} className="nav-link-btn">首页</Button>
               {isLoggedIn ? (
-                <Button type="link" icon={<LockOutlined />} onClick={onGoAdmin}>管理后台</Button>
+                <Button type="text" icon={<LockOutlined />} onClick={onGoAdmin} className="nav-link-btn">管理后台</Button>
               ) : (
-                <Button type="primary" icon={<UserAddOutlined />} shape="round" onClick={onGoRegister}>注册/登录</Button>
+                <Button type="text" icon={<UserAddOutlined />} onClick={onGoRegister} className="nav-link-btn">注册/登录</Button>
               )}
             </Space>
           </div>
