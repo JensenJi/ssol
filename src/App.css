@@ -281,18 +281,23 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
 @media (max-width: 768px) {
   .navbar { 
     flex-wrap: wrap; 
-    padding: 8px 12px; 
-    gap: 8px;
+    padding: 8px 10px; 
+    gap: 6px;
   }
-  .navbar-logo { flex: 1; min-width: 0; }
+  .navbar-logo { 
+    flex: 0 0 auto; 
+    min-width: 0; 
+    max-width: 55%;
+  }
   .navbar-actions { 
     flex-wrap: wrap; 
     gap: 4px !important;
+    margin-left: auto;
   }
   .nav-btn { 
-    height: 34px !important; 
-    padding: 0 12px !important; 
-    font-size: 13px !important; 
+    height: 32px !important; 
+    padding: 0 10px !important; 
+    font-size: 12px !important; 
   }
   .navbar-center {
     order: 3;
@@ -307,8 +312,8 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
     width: 100% !important; 
   }
   .logo-slogan { display: none; }
-  .logo-text { font-size: 16px; }
-  .logo-url { font-size: 10px; }
+  .logo-text { font-size: 15px; letter-spacing: 1px; }
+  .logo-url { font-size: 9px; }
   .map-wrapper { min-height: 200px; }
   .map-container { min-height: 200px; }
   .result-table { 
