@@ -62,7 +62,7 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
   const [experts, setExperts] = useState<Doctor[]>(mockDoctors.filter(d => d.verified));
-  const [tableExpanded, setTableExpanded] = useState(false);
+  const [tableExpanded, setTableExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 800);
   const [tableHeight, setTableHeight] = useState(200);
   const [ipLocation, setIpLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const dragRef = useRef<{ startY: number; startHeight: number; wasExpanded: boolean } | null>(null);
@@ -594,7 +594,9 @@ function App() {
           </div>
           {/* 结果列表 */}
           <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={{ height: tableExpanded ? tableHeight : 40 }}>
-            <div className="drag-handle" onMouseDown={handleDragStart} title="拖动调整列表高度" />
+            <div className="drag-handle" onMouseDown={handleDragStart} title="拖动调整列表高度">
+              <span style={{ fontSize: 11, color: '#999', userSelect: 'none' }}>{tableExpanded ? '▼ 收起列表' : '▲ 展开列表'}</span>
+            </div>
             {tableExpanded && (
               <div className="result-table-content">
                 <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
