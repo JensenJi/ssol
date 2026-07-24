@@ -49,7 +49,7 @@ export default function PersonalCenter({ onBack, user, favorites, allDoctors, on
   const tabs = [
     { key: 'card', label: '我的卡片', icon: <UserOutlined /> },
     { key: 'edit', label: '信息修改', icon: <EditOutlined /> },
-    { key: 'resume', label: '我的简历', icon: <EditOutlined /> },
+    { key: 'resume', label: '简历', icon: <EditOutlined /> },
     { key: 'favorites', label: `收藏的好友 (${favoritedDoctors.length})`, icon: <HeartOutlined /> },
     { key: 'keywords', label: '我的关键词', icon: <TagsOutlined /> },
     { key: 'interactions', label: '互动记录', icon: <StarOutlined /> },
@@ -168,9 +168,9 @@ export default function PersonalCenter({ onBack, user, favorites, allDoctors, on
           </Card>
         )}
 
-        {/* 我的简历 */}
+        {/* 简历 */}
         {tab === 'resume' && (
-          <Card title="我的简历">
+          <Card>
             <ResumeEditor />
           </Card>
         )}

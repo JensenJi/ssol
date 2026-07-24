@@ -107,18 +107,27 @@ function App() {
 
   // 尝试获取用户位置：优先IP定位，备选GPS
   useEffect(() => {
-    // 1. 通过IP自动定位
-    fetch('https://ipapi.co/json/')
+    // 设置默认位置，避免显示"正在获取"
+    setLocationName('北京');
+    setUserLocation({ lat: 39.9042, lng: 116.4074 });
+
+    // 通过IP自动定位（带超时）
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+    fetch('https://ipapi.co/json/', { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
+        clearTimeout(timeoutId);
         if (data.latitude && data.longitude) {
           const name = [data.region, data.city, data.district].filter(Boolean).join(' ');
           setIpLocation({ name, lat: data.latitude, lng: data.longitude });
           setUserLocation({ lat: data.latitude, lng: data.longitude });
-          setLocationName(name || '未知位置');
+          setLocationName(name || '北京');
         }
       })
       .catch(() => {
+        clearTimeout(timeoutId);
         // IP定位失败，尝试GPS
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
@@ -129,6 +138,8 @@ function App() {
           );
         }
       });
+
+    return () => { clearTimeout(timeoutId); controller.abort(); };
   }, []);
 
   // 隐藏的管理后台入口：URL hash 或快捷键 Ctrl+Shift+A
@@ -278,6 +289,15 @@ function App() {
     setPendingUsers((prev) => prev.filter((u) => u.id !== id));
   }, []);
 
+  const handleLogout = useCallback(() => {
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    setCurrentPage('home');
+    localStorage.removeItem('ssol_loggedIn');
+    localStorage.removeItem('ssol_currentUser');
+    message.success('已退出登录');
+  }, []);
+
   const handleAdminLogin = useCallback(() => {
     setCurrentPage('admin');
   }, []);
@@ -333,6 +353,7 @@ function App() {
             onGoAdmin={() => setCurrentPage('adminLogin')}
             onGoPersonal={() => setCurrentPage('personal')}
             onGoUsers={() => setCurrentPage('users')}
+            onLogout={handleLogout}
             ipLocation={ipLocation} isLoggedIn={isLoggedIn}
           />
           <RegisterPage onBack={() => setCurrentPage('home')} onRegister={handleRegister} ipLocation={ipLocation} />
@@ -364,6 +385,7 @@ function App() {
             onGoRegister={() => {}} onGoHome={() => setCurrentPage('home')}
             ipLocation={ipLocation} isLoggedIn={isLoggedIn}
             onGoAdmin={() => setCurrentPage('adminLogin')}
+            onLogout={handleLogout}
           />
           <AdminLogin onBack={() => setCurrentPage('home')} onLogin={handleAdminLogin} />
         </>
@@ -375,6 +397,7 @@ function App() {
             onGoRegister={() => {}} onGoHome={() => setCurrentPage('home')}
             ipLocation={ipLocation} isLoggedIn={true}
             onGoAdmin={() => setCurrentPage('adminLogin')}
+            onLogout={handleLogout}
           />
           <AdminDashboard onBack={() => setCurrentPage('home')} pendingUsers={pendingUsers} registeredUsers={registeredUsers} onApprove={handleApprove} onReject={handleReject} />
         </>
@@ -388,6 +411,7 @@ function App() {
             onGoAdmin={() => setCurrentPage('adminLogin')}
             onGoPersonal={() => setCurrentPage('personal')}
             onGoUsers={() => setCurrentPage('users')}
+            onLogout={handleLogout}
             ipLocation={ipLocation} isLoggedIn={isLoggedIn}
           />
         <div className="main-content">

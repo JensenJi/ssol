@@ -35,6 +35,7 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
 .navbar-center { display: flex; align-items: center; flex: 1; justify-content: center; gap: 16px; }
 .navbar-actions { flex-shrink: 0; }
 .nav-btn { border-radius: 20px !important; height: 40px !important; padding: 0 20px !important; font-size: 16px !important; }
+.nav-btn-logout { background: #ff4d4f !important; border-color: #ff4d4f !important; }
 
 /* 主内容 */
 .main-content { flex: 1; display: flex; overflow: visible; position: relative; }
@@ -184,24 +185,38 @@ html, body, #root { height: 100%; width: 100%; font-family: -apple-system, Blink
 .resume-header { display: flex; gap: 16px; align-items: center; }
 .resume-photo-section { display: flex; flex-direction: column; align-items: center; }
 .resume-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #e8e8e8; }
-.resume-photo-placeholder { width: 80px; height: 80px; border-radius: 50%; background: #f5f5f5; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #d9d9d9; }
+.resume-photo-placeholder { width: 80px; height: 80px; border-radius: 50%; background: #f5f5f5; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #d9d9d9; transition: border-color 0.2s; }
+.resume-photo-placeholder:hover { border-color: #1677ff; }
 .resume-name-section { flex: 1; }
 .resume-body { display: flex; gap: 20px; }
 .resume-main { flex: 2; }
 .resume-sidebar { flex: 1; min-width: 180px; }
 .resume-section { margin-bottom: 16px; }
 .resume-section-title { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 2px solid #1677ff; }
-.resume-section-title-input { border: none !important; border-bottom: 2px solid #1677ff !important; border-radius: 0 !important; padding: 2px 6px !important; background: transparent; }
-.resume-section-title-input:focus { box-shadow: none !important; border-bottom-color: #4096ff !important; }
-.resume-input { width: 100%; margin-bottom: 4px; }
-.resume-input:focus { border-bottom: 2px solid #1677ff !important; }
-.resume-textarea { width: 100%; resize: vertical; }
-.resume-experience-item { background: #fafafa; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
+.resume-section-title-input { border: none !important; border-bottom: 2px solid transparent !important; border-radius: 0 !important; padding: 2px 6px !important; background: transparent; transition: border-color 0.2s; }
+.resume-section-title-input:hover { border-bottom-color: #d9d9d9 !important; }
+.resume-section-title-input:focus { box-shadow: none !important; border-bottom-color: #1677ff !important; }
+.resume-input { width: 100%; margin-bottom: 4px; border: 1px solid transparent !important; border-radius: 4px !important; transition: border-color 0.2s, background 0.2s; }
+.resume-input:hover { border-color: #d9d9d9 !important; background: #fafafa; }
+.resume-input:focus { border-color: #1677ff !important; background: #fff; box-shadow: 0 0 0 2px rgba(22,119,255,0.1) !important; }
+.resume-textarea { width: 100%; resize: vertical; border: 1px solid transparent !important; border-radius: 4px !important; transition: border-color 0.2s; }
+.resume-textarea:hover { border-color: #d9d9d9 !important; }
+.resume-textarea:focus { border-color: #1677ff !important; box-shadow: 0 0 0 2px rgba(22,119,255,0.1) !important; }
+.resume-experience-item { background: transparent; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; transition: background 0.2s; }
+.resume-experience-item:hover { background: #fafafa; }
 .resume-detail-item { display: flex; align-items: center; margin-bottom: 8px; font-size: 13px; }
 .resume-detail-item .resume-input { flex: 1; }
 .resume-skill-item { margin-bottom: 12px; }
 .resume-skill-bar { width: 100%; height: 6px; background: #f0f0f0; border-radius: 3px; overflow: hidden; }
 .resume-skill-fill { height: 100%; background: #1677ff; border-radius: 3px; transition: width 0.3s; }
+
+/* 添加按钮 - 默认隐藏，hover时显示 */
+.resume-add-btn { opacity: 0; transition: opacity 0.2s; }
+.resume-section:hover .resume-add-btn { opacity: 1; }
+.resume-experience-item .resume-delete-btn { opacity: 0; transition: opacity 0.2s; }
+.resume-experience-item:hover .resume-delete-btn { opacity: 1; }
+.resume-detail-item .resume-delete-btn { opacity: 0; transition: opacity 0.2s; }
+.resume-detail-item:hover .resume-delete-btn { opacity: 1; }
 
 /* 照片相册 */
 .photo-album { max-height: 500px; overflow-y: auto; }

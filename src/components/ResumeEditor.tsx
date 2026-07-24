@@ -115,14 +115,15 @@ export default function ResumeEditor() {
     setResume((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handlePhotoUpload = (file: UploadFile) => {
-    // 模拟上传 - 实际项目中需要上传到服务器
+  const handlePhotoUpload = (options: any) => {
+    const { file } = options;
     const reader = new FileReader();
     reader.onload = (e) => {
       updateField('photo', e.target?.result as string);
+      options.onSuccess();
     };
-    reader.readAsDataURL(file.originFileObj as File);
-    return false; // 阻止自动上传
+    reader.onerror = () => options.onError(new Error('读取失败'));
+    reader.readAsDataURL(file);
   };
 
   const addExperience = () => {
@@ -198,8 +199,9 @@ export default function ResumeEditor() {
         <div className="resume-photo-section">
           <Upload
             showUploadList={false}
-            beforeUpload={handlePhotoUpload}
+            customRequest={handlePhotoUpload}
             accept="image/*"
+            maxCount={1}
           >
             {resume.photo ? (
               <img src={resume.photo} alt="头像" className="resume-photo" style={{ cursor: 'pointer' }} />
@@ -277,7 +279,7 @@ export default function ResumeEditor() {
                 className="resume-section-title-input"
                 style={{ fontSize: 14, fontWeight: 600, padding: '2px 6px' }}
               />
-              <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addExperience}>
+              <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addExperience} className="resume-add-btn">
                 添加经历
               </Button>
             </div>
@@ -301,6 +303,7 @@ export default function ResumeEditor() {
                     type="text"
                     danger
                     onClick={() => removeExperience(exp.id)}
+                    className="resume-delete-btn"
                     style={{ fontSize: 12 }}
                   >
                     删除
@@ -366,7 +369,7 @@ export default function ResumeEditor() {
                 className="resume-section-title-input"
                 style={{ fontSize: 14, fontWeight: 600, padding: '2px 6px' }}
               />
-              <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addEducation}>
+              <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addEducation} className="resume-add-btn">
                 添加教育
               </Button>
             </div>
@@ -461,7 +464,7 @@ export default function ResumeEditor() {
                 className="resume-section-title-input"
                 style={{ fontSize: 14, fontWeight: 600, padding: '2px 6px' }}
               />
-              <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addLink}>
+              <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addLink} className="resume-add-btn">
                 添加
               </Button>
             </div>
@@ -486,6 +489,7 @@ export default function ResumeEditor() {
                   danger
                   onClick={() => removeLink(idx)}
                   icon={<DeleteOutlined />}
+                  className="resume-delete-btn"
                   style={{ fontSize: 12, flexShrink: 0, marginLeft: 4 }}
                 />
               </div>
@@ -501,7 +505,7 @@ export default function ResumeEditor() {
                 className="resume-section-title-input"
                 style={{ fontSize: 14, fontWeight: 600, padding: '2px 6px' }}
               />
-              <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addSkill}>
+              <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addSkill} className="resume-add-btn">
                 添加
               </Button>
             </div>
@@ -525,6 +529,7 @@ export default function ResumeEditor() {
                   danger
                   onClick={() => removeSkill(idx)}
                   icon={<DeleteOutlined />}
+                  className="resume-delete-btn"
                   style={{ fontSize: 12, flexShrink: 0, marginLeft: 4 }}
                 />
               </div>

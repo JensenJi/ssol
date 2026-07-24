@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Input, Button, Space, Modal, Select } from 'antd';
-import { SearchOutlined, UserAddOutlined, UserOutlined, TeamOutlined, AimOutlined, EnvironmentOutlined, HomeOutlined, LockOutlined } from '@ant-design/icons';
+import { SearchOutlined, UserAddOutlined, UserOutlined, TeamOutlined, AimOutlined, EnvironmentOutlined, HomeOutlined, LockOutlined, LogoutOutlined } from '@ant-design/icons';
 import PushpinIcon from './PushpinIcon';
 
 const distanceData = [
@@ -20,12 +20,13 @@ interface NavbarProps {
   onGoAdmin?: () => void;
   onGoPersonal?: () => void;
   onGoUsers?: () => void;
+  onLogout?: () => void;
   ipLocation?: { name: string; lat: number; lng: number } | null;
   isLoggedIn?: boolean;
   onGoHome?: () => void;
 }
 
-export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, onGoAdmin, onGoPersonal, onGoUsers, ipLocation, isLoggedIn, onGoHome }: NavbarProps) {
+export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, onGoAdmin, onGoPersonal, onGoUsers, onLogout, ipLocation, isLoggedIn, onGoHome }: NavbarProps) {
   const [keyword, setKeyword] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogKeyword, setDialogKeyword] = useState('');
@@ -92,6 +93,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
                   <Button type="primary" icon={<UserOutlined />} onClick={onGoPersonal} className="nav-btn">个人中心</Button>
                   <Button type="primary" icon={<TeamOutlined />} onClick={onGoUsers} className="nav-btn">用户管理</Button>
                   <Button type="primary" icon={<LockOutlined />} onClick={onGoAdmin} className="nav-btn">管理后台</Button>
+                  <Button type="primary" danger icon={<LogoutOutlined />} onClick={onLogout} className="nav-btn nav-btn-logout">退出</Button>
                 </>
               ) : (
                 <Button type="primary" icon={<UserAddOutlined />} onClick={onGoRegister} className="nav-btn">注册/登录</Button>
@@ -123,7 +125,9 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
                 {ipLocation.name}
               </div>
             ) : (
-              <div style={{ color: '#999', fontSize: 13 }}>正在获取位置...</div>
+              <div style={{ background: '#fafafa', border: '1px solid #e8e8e8', borderRadius: 6, padding: '10px 14px', fontSize: 14, color: '#666' }}>
+                北京（默认位置，请在下方手动更正）
+              </div>
             )}
             <div style={{ fontSize: 12, color: '#999', marginTop: 6 }}>位置不准确？请在下方手动更正</div>
           </div>
