@@ -111,73 +111,111 @@ function App() {
     }).catch(() => {});
   }, []);
 
-  // 尝试获取用户位置：优先IP定位，备选GPS
+  // 尝试获取用户位置：浏览器GPS优先，备选IP定位
   useEffect(() => {
-    // 设置默认位置，避免显示"正在获取"
-    setLocationName('北京');
-    setUserLocation({ lat: 39.9042, lng: 116.4074 });
+    let geoWatchId: number | null = null;
 
-    // 通过IP自动定位（多API备用，带超时）
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    // 方案1：浏览器 watchPosition（最精准，GPS可达5米内）
+    if (navigator.geolocation) {
+      // 先用 getCurrentPosition 快速拿一个结果
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setUserLocation({ lat, lng });
+          reverseGeocode(lat, lng);
+        },
+        () => { /* GPS失败，走IP */ getIPLocation(); },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
 
-    // 优先使用 ipinfo.io（对中国IP更准确）
-    fetch('https://ipinfo.io/json?token=', { signal: controller.signal })
-      .then((res) => res.json())
-      .then((data) => {
-        clearTimeout(timeoutId);
-        if (data.loc) {
-          const [lat, lng] = data.loc.split(',').map(Number);
-          // ipinfo 的 region 是省份，city 是城市
-          const name = [data.region, data.city].filter(Boolean).join(' ');
-          if (lat && lng) {
-            setIpLocation({ name: name || '北京', lat, lng });
-            setUserLocation({ lat, lng });
-            setLocationName(name || '北京');
+      // 同时用 watchPosition 持续优化精度（30秒后自动停止）
+      geoWatchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setUserLocation({ lat, lng });
+          reverseGeocode(lat, lng);
+        },
+        () => { /* ignore watch errors */ },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+      setTimeout(() => {
+        if (geoWatchId !== null) navigator.geolocation.clearWatch(geoWatchId);
+      }, 30000);
+    } else {
+      getIPLocation();
+    }
+
+    // 反向地理编码：坐标→地名
+    function reverseGeocode(lat: number, lng: number) {
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=zh&zoom=12`)
+        .then((r) => r.json())
+        .then((d) => {
+          const addr = d.address || {};
+          const name = [addr.state, addr.city || addr.town || addr.county, addr.suburb || addr.district].filter(Boolean).join(' ');
+          if (name) {
+            setIpLocation({ name, lat, lng });
+            setLocationName(name);
+          }
+        })
+        .catch(() => {
+          setLocationName(`${lat.toFixed(2)}, ${lng.toFixed(2)}`);
+        });
+    }
+
+    // 方案2：IP定位（多API降级，精确到城市级）
+    function getIPLocation() {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      // 1) ip-api.com（免费，无需key，中国城市级准确）
+      fetch('http://ip-api.com/json/?lang=zh-CN', { signal: controller.signal })
+        .then((res) => res.json())
+        .then((data) => {
+          clearTimeout(timeoutId);
+          if (data && data.status === 'success' && data.lat && data.lon) {
+            const name = [data.regionName, data.city, data.district].filter(Boolean).join(' ');
+            setIpLocation({ name: name || '未知', lat: data.lat, lng: data.lon });
+            setUserLocation({ lat: data.lat, lng: data.lon });
+            setLocationName(name || '未知');
             return;
           }
-        }
-        // ipinfo 失败，尝试 ipapi.co
-        return fetch('https://ipapi.co/json/', { signal: controller.signal });
-      })
-      .then((res) => {
-        if (!res) return;
-        return res.json();
-      })
-      .then((data) => {
-        if (data && data.latitude && data.longitude) {
-          const name = [data.region, data.city, data.district].filter(Boolean).join(' ');
-          setIpLocation({ name, lat: data.latitude, lng: data.longitude });
-          setUserLocation({ lat: data.latitude, lng: data.longitude });
-          setLocationName(name || '北京');
-        }
-      })
-      .catch(() => {
-        clearTimeout(timeoutId);
-        // IP定位全部失败，尝试GPS
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-              // 反向地理编码获取地名
-              fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=zh`)
-                .then((r) => r.json())
-                .then((d) => {
-                  const addr = d.address || {};
-                  const name = [addr.state, addr.city || addr.town || addr.county, addr.suburb || addr.district].filter(Boolean).join(' ');
-                  if (name) {
-                    setIpLocation({ name, lat: pos.coords.latitude, lng: pos.coords.longitude });
-                    setLocationName(name);
-                  }
-                })
-                .catch(() => {});
-            },
-            () => { /* 用户拒绝定位，使用默认北京 */ }
-          );
-        }
-      });
+          return fetch('https://ipapi.co/json/', { signal: controller.signal });
+        })
+        .then((res) => { if (!res) return; return res.json(); })
+        .then((data) => {
+          if (data && data.latitude && data.longitude) {
+            const name = [data.region, data.city].filter(Boolean).join(' ');
+            setIpLocation({ name: name || '未知', lat: data.latitude, lng: data.longitude });
+            setUserLocation({ lat: data.latitude, lng: data.longitude });
+            setLocationName(name || '未知');
+            return;
+          }
+          return fetch('https://api.ip.sb/geoip', { signal: controller.signal });
+        })
+        .then((res) => { if (!res) return; return res.json(); })
+        .then((data) => {
+          if (data && data.latitude && data.longitude) {
+            const name = [data.region, data.city].filter(Boolean).join(' ');
+            setIpLocation({ name: name || '未知', lat: data.latitude, lng: data.longitude });
+            setUserLocation({ lat: data.latitude, lng: data.longitude });
+            setLocationName(name || '未知');
+          }
+        })
+        .catch(() => {
+          clearTimeout(timeoutId);
+          console.log('IP定位全部失败');
+          // 全部失败时默认设为山东济宁（汶上县所属地级市）
+          setIpLocation({ name: '山东 济宁', lat: 35.41, lng: 116.52 });
+          setUserLocation({ lat: 35.41, lng: 116.52 });
+          setLocationName('山东 济宁');
+        });
+    }
 
-    return () => { clearTimeout(timeoutId); controller.abort(); };
+    return () => {
+      if (geoWatchId !== null) navigator.geolocation.clearWatch(geoWatchId);
+    };
   }, []);
 
   // 隐藏的管理后台入口：URL hash 或快捷键 Ctrl+Shift+A
@@ -366,6 +404,18 @@ function App() {
     setPendingUsers((prev) => prev.filter((u) => u.id !== id));
   }, []);
 
+  // 用户管理：更新用户信息
+  const handleUpdateUser = useCallback((updatedUser: Partial<Doctor>) => {
+    setRegisteredUsers((prev) => prev.map((u) => u.id === updatedUser.id ? updatedUser : u));
+    setPendingUsers((prev) => prev.map((u) => u.id === updatedUser.id ? updatedUser : u));
+  }, []);
+
+  // 用户管理：删除用户
+  const handleDeleteUser = useCallback((id: string) => {
+    setRegisteredUsers((prev) => prev.filter((u) => u.id !== id));
+    setPendingUsers((prev) => prev.filter((u) => u.id !== id));
+  }, []);
+
   const handleLogout = useCallback(() => {
     setIsLoggedIn(false);
     setCurrentUser(null);
@@ -390,6 +440,15 @@ function App() {
     }
     setCurrentPage('admin');
   }, [currentUser]);
+
+  // 导航栏点击"管理后台"：如果已登录直接进后台，否则显示登录页
+  const handleGoAdmin = useCallback(() => {
+    if (isAdminLoggedIn) {
+      setCurrentPage('admin');
+    } else {
+      setCurrentPage('adminLogin');
+    }
+  }, [isAdminLoggedIn]);
 
   const handleAdminLogout = useCallback(() => {
     setIsAdminLoggedIn(false);
@@ -446,7 +505,7 @@ function App() {
           <Navbar
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
             onGoRegister={() => {}} onGoHome={() => setCurrentPage('home')}
-            onGoAdmin={() => setCurrentPage('adminLogin')}
+            onGoAdmin={handleGoAdmin}
             onGoPersonal={() => setCurrentPage('personal')}
             onGoUsers={() => setCurrentPage('users')}
             onLogout={handleLogout}
@@ -472,6 +531,8 @@ function App() {
           favorites={favorites}
           onFavorite={handleFavorite}
           currentUser={currentUser}
+          onUpdateUser={handleUpdateUser}
+          onDeleteUser={handleDeleteUser}
         />
       )}
       {currentPage === 'adminLogin' && !isAdminLoggedIn && (
@@ -480,7 +541,7 @@ function App() {
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
             onGoRegister={() => setCurrentPage('register')} onGoLogin={handleNavLogin}
             onGoHome={() => setCurrentPage('home')}
-            onGoAdmin={() => setCurrentPage('adminLogin')}
+            onGoAdmin={handleGoAdmin}
             onGoPersonal={() => setCurrentPage('personal')}
             onGoUsers={() => setCurrentPage('users')}
             onLogout={handleLogout}
@@ -512,7 +573,7 @@ function App() {
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
             onGoRegister={() => setCurrentPage('register')} onGoLogin={handleNavLogin}
             onGoHome={() => setCurrentPage('home')}
-            onGoAdmin={() => setCurrentPage('adminLogin')}
+            onGoAdmin={handleGoAdmin}
             onGoPersonal={() => setCurrentPage('personal')}
             onGoUsers={() => setCurrentPage('users')}
             onLogout={handleLogout}

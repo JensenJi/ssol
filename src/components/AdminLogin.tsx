@@ -95,9 +95,9 @@ export default function AdminLogin({ onBack, onLogin }: AdminLoginProps) {
             </Button>
           </Form>
 
-          {/* 首次使用提示设置正式账号 */}
-          {isDefault && (
-            <div style={{ marginTop: 20, textAlign: 'center' }}>
+          {/* 重置密码入口（始终可见） */}
+          <div style={{ marginTop: 16, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {isDefault ? (
               <Button
                 type="link"
                 icon={<SettingOutlined />}
@@ -106,8 +106,29 @@ export default function AdminLogin({ onBack, onLogin }: AdminLoginProps) {
               >
                 首次使用？点击设置正式管理员账号
               </Button>
-            </div>
-          )}
+            ) : (
+              <Button
+                type="link"
+                icon={<SettingOutlined />}
+                onClick={() => {
+                  Modal.confirm({
+                    title: '重置管理员密码',
+                    content: '确定要重置管理员密码为默认值吗？',
+                    okText: '确认重置',
+                    cancelText: '取消',
+                    onOk: () => {
+                      localStorage.removeItem(ADMIN_CREDENTIALS_KEY);
+                      message.success('密码已重置为默认（admin / ssol2024）');
+                      form.resetFields();
+                    },
+                  });
+                }}
+                style={{ fontSize: 13 }}
+              >
+                忘记密码？重置为默认密码
+              </Button>
+            )}
+          </div>
         </Card>
       </div>
 

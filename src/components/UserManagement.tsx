@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Card, Avatar, Tag, Button, Input, List, Empty, Tabs, Statistic, Row, Col } from 'antd';
+import { Card, Avatar, Tag, Button, Input, List, Empty, Tabs, Statistic, Row, Col, Modal, Form, message, Popconfirm } from 'antd';
 import {
   UserOutlined, ArrowLeftOutlined, SearchOutlined,
   HeartOutlined, StarOutlined, EyeOutlined,
+  EditOutlined, DeleteOutlined, CheckOutlined,
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
 
@@ -15,11 +16,15 @@ interface UserManagementProps {
   favorites: string[];
   onFavorite: (doctor: Doctor) => void;
   currentUser: Partial<Doctor> | null;
+  onUpdateUser?: (user: Partial<Doctor>) => void;
+  onDeleteUser?: (id: string) => void;
 }
 
-export default function UserManagement({ onBack, allUsers, experts, favorites, onFavorite, currentUser }: UserManagementProps) {
+export default function UserManagement({ onBack, allUsers, experts, favorites, onFavorite, currentUser, onUpdateUser, onDeleteUser }: UserManagementProps) {
   const [tab, setTab] = useState<'all' | 'experts' | 'favorites'>('all');
   const [searchText, setSearchText] = useState('');
+  const [editUser, setEditUser] = useState<Partial<Doctor> | null>(null);
+  const [editForm] = Form.useForm();
 
   // 过滤用户
   const filterUsers = (users: Partial<Doctor>[]) => {
@@ -37,13 +42,58 @@ export default function UserManagement({ onBack, allUsers, experts, favorites, o
   const verifiedUsers = allUsers.filter((u) => u.verified);
   const favoritedExperts = experts.filter((e) => favorites.includes(e.id));
 
+  const handleEditClick = (user: Partial<Doctor>) => {
+    setEditUser(user);
+    editForm.setFieldsValue({
+      name: user.name || '',
+      category: user.category || '',
+      hospital: user.hospital || '',
+      title: user.title || '',
+      province: user.province || '',
+      city: user.city || '',
+      keywords: user.keywords?.join(', ') || '',
+      bio: user.bio || '',
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      const values = await editForm.validateFields();
+      if (editUser && onUpdateUser) {
+        onUpdateUser({
+          ...editUser,
+          name: values.name,
+          category: values.category,
+          hospital: values.hospital,
+          title: values.title,
+          province: values.province,
+          city: values.city,
+          keywords: values.keywords ? values.keywords.split(/[,，、\s]+/).filter(Boolean) : [],
+          bio: values.bio,
+        });
+        message.success('用户信息已更新');
+        setEditUser(null);
+        editForm.resetFields();
+      }
+    } catch {
+      message.warning('请填写必填项');
+    }
+  };
+
+  const handleDeleteUser = (user: Partial<Doctor>) => {
+    if (onDeleteUser && user.id) {
+      onDeleteUser(user.id);
+      message.success(`已删除用户：${user.name || '未命名'}`);
+    }
+  };
+
   const renderUserCard = (user: Partial<Doctor>) => (
     <List.Item style={{ padding: '16px 0' }}>
       <List.Item.Meta
         avatar={<Avatar size={48} style={{ backgroundColor: '#1677ff' }} icon={<UserOutlined />} />}
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <strong style={{ fontSize: 15 }}>{user.name || '未命名'}</strong>
+            <a onClick={() => handleEditClick(user)} style={{ fontWeight: 700, fontSize: 15 }}>{user.name || '未命名'}</a>
             {user.verified ? <Tag color="success" style={{ fontSize: 11 }}>已认证</Tag> : <Tag color="warning" style={{ fontSize: 11 }}>待审核</Tag>}
             {user.category && <Tag style={{ fontSize: 11 }}>{user.category}</Tag>}
           </div>
@@ -61,6 +111,12 @@ export default function UserManagement({ onBack, allUsers, experts, favorites, o
           {user.keywords?.slice(0, 3).map((kw) => <Tag key={kw} style={{ fontSize: 11 }}>{kw}</Tag>)}
         </div>
         {user.bio && <div style={{ fontSize: 12, color: '#999', maxWidth: 200, textAlign: 'right' }}>{user.bio.slice(0, 30)}...</div>}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button size="small" icon={<EditOutlined />} onClick={() => handleEditClick(user)}>编辑</Button>
+          <Popconfirm title="确定删除此用户？" onConfirm={() => handleDeleteUser(user)} okText="确定" cancelText="取消">
+            <Button size="small" danger icon={<DeleteOutlined />}>删除</Button>
+          </Popconfirm>
+        </div>
       </div>
     </List.Item>
   );
@@ -187,6 +243,59 @@ export default function UserManagement({ onBack, allUsers, experts, favorites, o
           ]}
         />
       </div>
+
+      {/* 编辑用户弹窗 */}
+      <Modal
+        title={<span><EditOutlined style={{ color: '#1677ff', marginRight: 8 }} />编辑用户信息</span>}
+        open={!!editUser}
+        onCancel={() => { setEditUser(null); editForm.resetFields(); }}
+        width={560}
+        footer={[
+          <Button key="cancel" onClick={() => { setEditUser(null); editForm.resetFields(); }}>取消</Button>,
+          <Button key="save" type="primary" icon={<CheckOutlined />} onClick={handleSaveEdit}>保存</Button>,
+        ]}
+      >
+        {editUser && (
+          <Form form={editForm} layout="vertical" size="middle">
+            <Form.Item name="name" label="姓名" rules={[{ required: true, message: '请输入姓名' }]}>
+              <Input prefix={<UserOutlined />} />
+            </Form.Item>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="category" label="分类">
+                  <Input placeholder="如：翻译语言、非遗手艺" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="title" label="职称">
+                  <Input placeholder="如：高级翻译" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item name="hospital" label="单位">
+              <Input placeholder="工作单位" />
+            </Form.Item>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="province" label="省份">
+                  <Input placeholder="如：山东" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="city" label="城市">
+                  <Input placeholder="如：济宁" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item name="keywords" label="关键词">
+              <Input placeholder="多个关键词用逗号分隔" />
+            </Form.Item>
+            <Form.Item name="bio" label="简介">
+              <Input.TextArea rows={3} placeholder="个人简介" />
+            </Form.Item>
+          </Form>
+        )}
+      </Modal>
     </div>
   );
 }
