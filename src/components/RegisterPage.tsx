@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Form, Input, Button, Select, message, Card, Typography, Checkbox } from 'antd';
+import { Form, Input, Button, Select, message, Card, Typography } from 'antd';
 import {
   UserOutlined, PhoneOutlined, MailOutlined,
-  ArrowLeftOutlined, CheckCircleOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
 
@@ -20,7 +20,6 @@ interface RegisterPageProps {
 export default function RegisterPage({ onBack, onRegister, ipLocation }: RegisterPageProps) {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [isDoctor, setIsDoctor] = useState(false);
   const [customCategory, setCustomCategory] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -29,7 +28,7 @@ export default function RegisterPage({ onBack, onRegister, ipLocation }: Registe
     try {
       const values = await form.validateFields();
       setSubmitting(true);
-      onRegister({
+      await onRegister({
         name: values.nickname,
         realName: values.realName,
         keywords: values.keywords?.split(/[,，、\s]+/).filter(Boolean) || [],
@@ -44,31 +43,12 @@ export default function RegisterPage({ onBack, onRegister, ipLocation }: Registe
         likes: 0,
       } as Partial<Doctor>);
       setSubmitting(false);
-      setSubmitted(true);
+      // 成功后跳转到个人中心（由 App.tsx 的 handleRegister 处理）
     } catch (e) {
+      setSubmitting(false);
       message.warning('请填写必填项');
     }
   };
-
-  if (submitted) {
-    return (
-      <div className="register-page" style={{ paddingTop: 80 }}>
-        <div className="register-container">
-          <Card className="register-card">
-            <div className="success-section">
-              <CheckCircleOutlined style={{ fontSize: 64, color: '#52c41a' }} />
-              <Title level={4} style={{ marginTop: 16 }}>申请已提交</Title>
-              <Paragraph type="secondary">
-                您的入驻申请已提交成功，管理员将在1-3个工作日内完成审核。
-                <br />审核结果将通过短信通知您。
-              </Paragraph>
-              <Button type="primary" onClick={onBack}>返回首页</Button>
-            </div>
-          </Card>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="register-page" style={{ paddingTop: 80 }}>

@@ -10,6 +10,7 @@ import RegisterPage from './components/RegisterPage';
 import AdminDashboard from './components/AdminDashboard';
 import AdminLogin from './components/AdminLogin';
 import PersonalCenter from './components/PersonalCenter';
+import UserManagement from './components/UserManagement';
 import { userAPI, visitorAPI } from './lib/cloudbase';
 import { mockDoctors, calculateDistance } from './data/mockData';
 import type { Doctor } from './data/mockData';
@@ -38,18 +39,45 @@ function App() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationName, setLocationName] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('ssol_loggedIn') === 'true';
+  });
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [favTarget, setFavTarget] = useState<Doctor | null>(null);
   const [deviceInfo] = useState(detectDeviceInfo);
-  const [currentPage, setCurrentPage] = useState<'home' | 'register' | 'admin' | 'adminLogin' | 'personal'>('home');
-  const [currentUser, setCurrentUser] = useState<Partial<Doctor> | null>(null);
-  const [pendingUsers, setPendingUsers] = useState<Partial<Doctor>[]>([]);
+  const [currentPage, setCurrentPage] = useState<'home' | 'register' | 'admin' | 'adminLogin' | 'personal' | 'users'>('home');
+  const [currentUser, setCurrentUser] = useState<Partial<Doctor> | null>(() => {
+    const saved = localStorage.getItem('ssol_currentUser');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [pendingUsers, setPendingUsers] = useState<Partial<Doctor>[]>(() => {
+    const saved = localStorage.getItem('ssol_pendingUsers');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [registeredUsers, setRegisteredUsers] = useState<Partial<Doctor>[]>(() => {
+    const saved = localStorage.getItem('ssol_registeredUsers');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [experts, setExperts] = useState<Doctor[]>(mockDoctors.filter(d => d.verified));
   const [tableExpanded, setTableExpanded] = useState(false);
   const [tableHeight, setTableHeight] = useState(200);
   const [ipLocation, setIpLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const dragRef = useRef<{ startY: number; startHeight: number; wasExpanded: boolean } | null>(null);
+
+  // 登录状态持久化
+  useEffect(() => {
+    localStorage.setItem('ssol_loggedIn', String(isLoggedIn));
+  }, [isLoggedIn]);
+  useEffect(() => {
+    if (currentUser) localStorage.setItem('ssol_currentUser', JSON.stringify(currentUser));
+    else localStorage.removeItem('ssol_currentUser');
+  }, [currentUser]);
+  useEffect(() => {
+    localStorage.setItem('ssol_pendingUsers', JSON.stringify(pendingUsers));
+  }, [pendingUsers]);
+  useEffect(() => {
+    localStorage.setItem('ssol_registeredUsers', JSON.stringify(registeredUsers));
+  }, [registeredUsers]);
 
   // 从云开发加载认证专家数据
   useEffect(() => {
@@ -156,15 +184,18 @@ function App() {
   }, [isLoggedIn]);
 
   const handleLogin = useCallback(() => {
-    setIsLoggedIn(true); setLoginModalOpen(false);
-    // 模拟当前用户（实际应从后端获取）
+    setIsLoggedIn(true);
+    setLoginModalOpen(false);
+    // 如果还没有当前用户信息，创建一个默认用户
     if (!currentUser) {
-      setCurrentUser({
+      const defaultUser: Partial<Doctor> = {
+        id: `user-${Date.now()}`,
         name: '我的昵称',
         keywords: [],
         likes: 0,
         verified: false,
-      });
+      };
+      setCurrentUser(defaultUser);
     }
     if (favTarget) { setFavorites((prev) => [...prev, favTarget.id]); message.success(`已收藏 ${favTarget.name}`); setFavTarget(null); }
   }, [favTarget, currentUser]);
@@ -197,48 +228,54 @@ function App() {
   }, [searchKeyword, userLocation, experts]);
 
   const handleRegister = useCallback(async (user: Partial<Doctor>) => {
+    const userData = {
+      ...user,
+      id: user.id || `user-${Date.now()}`,
+      verified: false,
+      createdAt: new Date().toISOString(),
+    };
     try {
-      await userAPI.register({
-        ...user,
-        verified: false,
-        createdAt: new Date(),
-      });
+      // 尝试云数据库
+      await userAPI.register(userData);
       message.success('注册申请已提交，等待管理员审核');
-      // 注册成功后自动登录
-      setIsLoggedIn(true);
-      setCurrentUser(user);
-      setCurrentPage('personal');
-      // 刷新待审核列表
-      const pending = await userAPI.getPendingUsers();
-      setPendingUsers(pending as Partial<Doctor>[]);
-    } catch (error) {
-      message.error('提交失败，请重试');
+    } catch {
+      // 云数据库不可用，使用本地存储
+      console.log('云数据库不可用，使用本地存储');
     }
+    // 无论云数据库是否成功，都保存到本地
+    setPendingUsers((prev) => {
+      if (prev.find((u) => u.id === userData.id)) return prev;
+      return [...prev, userData];
+    });
+    setRegisteredUsers((prev) => {
+      if (prev.find((u) => u.id === userData.id)) return prev;
+      return [...prev, userData];
+    });
+    // 注册成功后自动登录并跳转个人中心
+    setIsLoggedIn(true);
+    setCurrentUser(userData);
+    setCurrentPage('personal');
   }, []);
 
   const handleApprove = useCallback(async (id: string) => {
-    try {
-      await userAPI.approveUser(id);
-      message.success('已通过审核');
-      // 刷新列表
-      const pending = await userAPI.getPendingUsers();
-      setPendingUsers(pending as Partial<Doctor>[]);
-      const verified = await userAPI.getVerifiedExperts();
-      setExperts(verified as Doctor[]);
-    } catch (error) {
-      message.error('操作失败');
+    try { await userAPI.approveUser(id); } catch { /* 本地模式 */ }
+    message.success('已通过审核');
+    setPendingUsers((prev) => prev.filter((u) => u.id !== id));
+    setRegisteredUsers((prev) => prev.map((u) => u.id === id ? { ...u, verified: true } : u));
+    // 将已通过的用户加入专家列表
+    const approved = registeredUsers.find((u) => u.id === id);
+    if (approved) {
+      setExperts((prev) => {
+        if (prev.find((e) => e.id === id)) return prev;
+        return [...prev, { ...approved, location_lat: 39.9, location_lng: 116.4 } as Doctor];
+      });
     }
-  }, []);
+  }, [registeredUsers]);
 
   const handleReject = useCallback(async (id: string) => {
-    try {
-      await userAPI.rejectUser(id);
-      message.info('已拒绝申请');
-      const pending = await userAPI.getPendingUsers();
-      setPendingUsers(pending as Partial<Doctor>[]);
-    } catch (error) {
-      message.error('操作失败');
-    }
+    try { await userAPI.rejectUser(id); } catch { /* 本地模式 */ }
+    message.info('已拒绝申请');
+    setPendingUsers((prev) => prev.filter((u) => u.id !== id));
   }, []);
 
   const handleAdminLogin = useCallback(() => {
@@ -293,8 +330,10 @@ function App() {
           <Navbar
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
             onGoRegister={() => {}} onGoHome={() => setCurrentPage('home')}
-            ipLocation={ipLocation} isLoggedIn={isLoggedIn}
             onGoAdmin={() => setCurrentPage('adminLogin')}
+            onGoPersonal={() => setCurrentPage('personal')}
+            onGoUsers={() => setCurrentPage('users')}
+            ipLocation={ipLocation} isLoggedIn={isLoggedIn}
           />
           <RegisterPage onBack={() => setCurrentPage('home')} onRegister={handleRegister} ipLocation={ipLocation} />
         </>
@@ -306,6 +345,16 @@ function App() {
           favorites={favorites}
           allDoctors={experts}
           onUpdateUser={setCurrentUser}
+        />
+      )}
+      {currentPage === 'users' && (
+        <UserManagement
+          onBack={() => setCurrentPage('home')}
+          allUsers={[...registeredUsers, ...pendingUsers.filter((u) => !registeredUsers.find((r) => r.id === u.id))]}
+          experts={experts}
+          favorites={favorites}
+          onFavorite={handleFavorite}
+          currentUser={currentUser}
         />
       )}
       {currentPage === 'adminLogin' && (
@@ -327,7 +376,7 @@ function App() {
             ipLocation={ipLocation} isLoggedIn={true}
             onGoAdmin={() => setCurrentPage('adminLogin')}
           />
-          <AdminDashboard onBack={() => setCurrentPage('home')} pendingUsers={pendingUsers} onApprove={handleApprove} onReject={handleReject} />
+          <AdminDashboard onBack={() => setCurrentPage('home')} pendingUsers={pendingUsers} registeredUsers={registeredUsers} onApprove={handleApprove} onReject={handleReject} />
         </>
       )}
       {currentPage === 'home' && (
@@ -338,6 +387,7 @@ function App() {
             onGoHome={() => setCurrentPage('home')}
             onGoAdmin={() => setCurrentPage('adminLogin')}
             onGoPersonal={() => setCurrentPage('personal')}
+            onGoUsers={() => setCurrentPage('users')}
             ipLocation={ipLocation} isLoggedIn={isLoggedIn}
           />
         <div className="main-content">

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Input, Button, Space, Modal, Select } from 'antd';
-import { SearchOutlined, UserAddOutlined, UserOutlined, AimOutlined, EnvironmentOutlined, HomeOutlined, LockOutlined } from '@ant-design/icons';
+import { SearchOutlined, UserAddOutlined, UserOutlined, TeamOutlined, AimOutlined, EnvironmentOutlined, HomeOutlined, LockOutlined } from '@ant-design/icons';
 import PushpinIcon from './PushpinIcon';
 
 const distanceData = [
@@ -19,12 +19,13 @@ interface NavbarProps {
   onGoRegister?: () => void;
   onGoAdmin?: () => void;
   onGoPersonal?: () => void;
+  onGoUsers?: () => void;
   ipLocation?: { name: string; lat: number; lng: number } | null;
   isLoggedIn?: boolean;
   onGoHome?: () => void;
 }
 
-export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, onGoAdmin, onGoPersonal, ipLocation, isLoggedIn, onGoHome }: NavbarProps) {
+export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, onGoAdmin, onGoPersonal, onGoUsers, ipLocation, isLoggedIn, onGoHome }: NavbarProps) {
   const [keyword, setKeyword] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogKeyword, setDialogKeyword] = useState('');
@@ -89,6 +90,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
               {isLoggedIn ? (
                 <>
                   <Button type="primary" icon={<UserOutlined />} onClick={onGoPersonal} className="nav-btn">个人中心</Button>
+                  <Button type="primary" icon={<TeamOutlined />} onClick={onGoUsers} className="nav-btn">用户管理</Button>
                   <Button type="primary" icon={<LockOutlined />} onClick={onGoAdmin} className="nav-btn">管理后台</Button>
                 </>
               ) : (

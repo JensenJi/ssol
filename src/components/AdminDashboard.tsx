@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Card, Row, Col, Statistic, Table, Tag, Button, Typography, Space, Input, Divider } from 'antd';
+import { Card, Row, Col, Statistic, Table, Tag, Button, Typography, Space, Input, Divider, Tabs } from 'antd';
 import { pinyin } from 'pinyin-pro';
 import {
   DashboardOutlined, UserAddOutlined, EyeOutlined,
@@ -13,6 +13,7 @@ const { Title, Text } = Typography;
 interface AdminDashboardProps {
   onBack: () => void;
   pendingUsers: Partial<Doctor>[];
+  registeredUsers: Partial<Doctor>[];
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
 }
@@ -47,7 +48,7 @@ const regionStats = [
   { name: '其他', count: 434 },
 ];
 
-export default function AdminDashboard({ onBack, pendingUsers, onApprove, onReject }: AdminDashboardProps) {
+export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, onApprove, onReject }: AdminDashboardProps) {
   const [keywords, setKeywords] = useState<string[]>([
     '渐冻症', '运动神经元病', '罕见神经疾病', '法洛四联症', '先天性心脏畸形', '大动脉转位',
     '陶瓷修复', '古瓷鉴损', '锔瓷', '苗药浴', '瑶医火功', '民族医药', '陨石鉴定', '矿石分析',
@@ -90,6 +91,48 @@ export default function AdminDashboard({ onBack, pendingUsers, onApprove, onReje
       })
       .map(([letter, kws]) => ({ letter, keywords: kws.sort((a, b) => a.localeCompare(b, 'zh-CN')) }));
   }, [keywords]);
+  const allUserColumns = [
+    {
+      title: '姓名', dataIndex: 'name', key: 'name',
+      render: (name: string) => <strong>{name || '未命名'}</strong>,
+    },
+    {
+      title: '状态', key: 'status',
+      render: (_: unknown, record: Partial<Doctor>) => (
+        record.verified ? <Tag color="success">已认证</Tag> : <Tag color="warning">待审核</Tag>
+      ),
+    },
+    {
+      title: '分类', dataIndex: 'category', key: 'category',
+      render: (cat: string) => cat ? <Tag color="blue">{cat}</Tag> : '-',
+    },
+    {
+      title: '单位', dataIndex: 'hospital', key: 'hospital',
+      render: (h: string) => h || '-',
+    },
+    {
+      title: '地区', key: 'location',
+      render: (_: unknown, record: Partial<Doctor>) => `${record.province || ''} ${record.city || ''}`.trim() || '-',
+    },
+    {
+      title: '关键词', dataIndex: 'keywords', key: 'keywords',
+      render: (keywords: string[]) => (
+        <span>{keywords?.slice(0, 3).map((k) => <Tag key={k} style={{ marginBottom: 2 }}>{k}</Tag>) || '-'}</span>
+      ),
+    },
+    {
+      title: '注册时间', dataIndex: 'createdAt', key: 'createdAt',
+      render: (t: string) => t ? new Date(t).toLocaleString('zh-CN') : '-',
+    },
+  ];
+
+  const allUsers = useMemo(() => {
+    const map = new Map<string, Partial<Doctor>>();
+    registeredUsers.forEach((u) => map.set(u.id!, u));
+    pendingUsers.forEach((u) => { if (!map.has(u.id!)) map.set(u.id!, u); });
+    return Array.from(map.values());
+  }, [registeredUsers, pendingUsers]);
+
   const pendingColumns = [
     {
       title: '姓名', dataIndex: 'name', key: 'name',
@@ -214,10 +257,12 @@ export default function AdminDashboard({ onBack, pendingUsers, onApprove, onReje
           ))}
         </Card>
 
-        <Row gutter={[12, 12]}>
-          {/* 待审核列表 */}
-          <Col xs={24} md={16}>
-            <Card title="待审核入驻申请" size="small">
+        {/* 用户管理 Tabs */}
+        <Tabs defaultActiveKey="pending" size="small" items={[
+          {
+            key: 'pending',
+            label: `待审核 (${pendingUsers.length})`,
+            children: (
               <Table
                 columns={pendingColumns}
                 dataSource={pendingUsers.map((u, i) => ({ ...u, key: u.id || `pending-${i}` }))}
@@ -226,11 +271,26 @@ export default function AdminDashboard({ onBack, pendingUsers, onApprove, onReje
                 scroll={{ x: 600 }}
                 locale={{ emptyText: '暂无待审核申请' }}
               />
-            </Card>
-          </Col>
+            ),
+          },
+          {
+            key: 'all',
+            label: `所有用户 (${allUsers.length})`,
+            children: (
+              <Table
+                columns={allUserColumns}
+                dataSource={allUsers.map((u, i) => ({ ...u, key: u.id || `user-${i}` }))}
+                pagination={{ pageSize: 10 }}
+                size="small"
+                scroll={{ x: 800 }}
+                locale={{ emptyText: '暂无注册用户' }}
+              />
+            ),
+          },
+        ]} style={{ marginBottom: 24 }} />
 
-          {/* 右侧统计 */}
-          <Col xs={24} md={8}>
+        <Row gutter={[12, 12]}>
+          <Col xs={24} md={12}>
             <Card title="设备分布" size="small" style={{ marginBottom: 16 }}>
               {deviceStats.map((d) => (
                 <div key={d.name} style={{ marginBottom: 8 }}>
@@ -244,7 +304,8 @@ export default function AdminDashboard({ onBack, pendingUsers, onApprove, onReje
                 </div>
               ))}
             </Card>
-
+          </Col>
+          <Col xs={24} md={12}>
             <Card title="访客地区 TOP" size="small">
               {regionStats.map((r, i) => (
                 <div key={r.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 13 }}>
