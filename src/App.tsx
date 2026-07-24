@@ -212,6 +212,22 @@ function App() {
     setLocationName(loc.name);
     if (loc.lat && loc.lng) {
       setUserLocation({ lat: loc.lat, lng: loc.lng });
+    } else if (loc.name) {
+      // 手动位置：通过Nominatim地理编码获取坐标
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(loc.name)}&format=json&limit=1&accept-language=zh`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data && data.length > 0) {
+            const newLat = parseFloat(data[0].lat);
+            const newLng = parseFloat(data[0].lon);
+            if (!isNaN(newLat) && !isNaN(newLng)) {
+              setUserLocation({ lat: newLat, lng: newLng });
+            }
+          }
+        })
+        .catch(() => {
+          // 地理编码失败，保持当前位置不变
+        });
     }
   }, []);
 
@@ -444,10 +460,13 @@ function App() {
         <>
           <Navbar
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
-            onGoRegister={() => {}} onGoHome={() => setCurrentPage('home')}
-            ipLocation={ipLocation} isLoggedIn={isLoggedIn}
+            onGoRegister={() => setCurrentPage('register')} onGoLogin={handleNavLogin}
+            onGoHome={() => setCurrentPage('home')}
             onGoAdmin={() => setCurrentPage('adminLogin')}
+            onGoPersonal={() => setCurrentPage('personal')}
+            onGoUsers={() => setCurrentPage('users')}
             onLogout={handleLogout}
+            ipLocation={ipLocation} isLoggedIn={isLoggedIn}
           />
           <AdminLogin onBack={() => setCurrentPage('home')} onLogin={handleAdminLogin} />
         </>
@@ -456,10 +475,13 @@ function App() {
         <>
           <Navbar
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
-            onGoRegister={() => {}} onGoHome={() => setCurrentPage('home')}
-            ipLocation={ipLocation} isLoggedIn={true}
+            onGoRegister={() => setCurrentPage('register')} onGoLogin={handleNavLogin}
+            onGoHome={() => setCurrentPage('home')}
             onGoAdmin={() => setCurrentPage('admin')}
+            onGoPersonal={() => setCurrentPage('personal')}
+            onGoUsers={() => setCurrentPage('users')}
             onLogout={handleAdminLogout}
+            ipLocation={ipLocation} isLoggedIn={true}
           />
           <AdminDashboard onBack={() => setCurrentPage('home')} pendingUsers={pendingUsers} registeredUsers={registeredUsers} onApprove={handleApprove} onReject={handleReject} />
         </>
