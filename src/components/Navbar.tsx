@@ -50,7 +50,8 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
     // 如果手动填写了位置，使用手动位置
     if (manualProvince && onLocationUpdate) {
       const name = [manualProvince, manualCity, manualDistrict].filter(Boolean).join(' ');
-      onLocationUpdate({ lat: 0, lng: 0, name });
+      // 传递一个标记值，让 App 知道这是手动位置需要地理编码
+      onLocationUpdate({ lat: -1, lng: -1, name });
     }
     if (onDistanceSelect) {
       onDistanceSelect(dialogDistance);

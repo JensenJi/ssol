@@ -210,13 +210,18 @@ function App() {
 
   const handleLocationUpdate = useCallback((loc: { lat: number; lng: number; name: string }) => {
     setLocationName(loc.name);
-    if (loc.lat && loc.lng) {
+    // 如果有有效坐标（非0非-1），直接使用
+    if (loc.lat > 0 && loc.lng > 0) {
       setUserLocation({ lat: loc.lat, lng: loc.lng });
     } else if (loc.name) {
-      // 手动位置：通过Nominatim地理编码获取坐标
-      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(loc.name)}&format=json&limit=1&accept-language=zh`)
+      // 手动位置：通过Nominatim地理编码获取坐标（带超时保护）
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
+      
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(loc.name)}&format=json&limit=1&accept-language=zh`, { signal: controller.signal })
         .then((r) => r.json())
         .then((data) => {
+          clearTimeout(timeoutId);
           if (data && data.length > 0) {
             const newLat = parseFloat(data[0].lat);
             const newLng = parseFloat(data[0].lon);
@@ -226,7 +231,9 @@ function App() {
           }
         })
         .catch(() => {
+          clearTimeout(timeoutId);
           // 地理编码失败，保持当前位置不变
+          console.log('地理编码失败，使用位置名称:', loc.name);
         });
     }
   }, []);
@@ -370,8 +377,19 @@ function App() {
 
   const handleAdminLogin = useCallback(() => {
     setIsAdminLoggedIn(true);
+    // 确保 currentUser 存在，以便导航到个人中心等页面
+    if (!currentUser) {
+      const defaultUser: Partial<Doctor> = {
+        id: `admin-user-${Date.now()}`,
+        name: '管理员',
+        keywords: [],
+        likes: 0,
+        verified: false,
+      };
+      setCurrentUser(defaultUser);
+    }
     setCurrentPage('admin');
-  }, []);
+  }, [currentUser]);
 
   const handleAdminLogout = useCallback(() => {
     setIsAdminLoggedIn(false);
