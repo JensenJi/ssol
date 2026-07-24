@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
-import { Card, Row, Col, Statistic, Table, Tag, Button, Typography, Space, Input, Divider, Tabs } from 'antd';
+import { Card, Row, Col, Statistic, Table, Tag, Button, Typography, Space, Input, Divider, Tabs, Modal, Form, message } from 'antd';
 import { pinyin } from 'pinyin-pro';
 import {
   DashboardOutlined, UserAddOutlined, EyeOutlined,
   SafetyCertificateOutlined, TagsOutlined,
   CheckOutlined, CloseOutlined, PlusOutlined, DeleteOutlined,
+  KeyOutlined, LockOutlined,
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
 
@@ -60,6 +61,28 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
     '银饰锻造', '扎染', '蜡染', '油纸伞', '竹编', '土陶',
   ]);
   const [newKeyword, setNewKeyword] = useState('');
+  const [pwdModalOpen, setPwdModalOpen] = useState(false);
+  const [pwdForm] = Form.useForm();
+
+  const handleChangePassword = async () => {
+    try {
+      const values = await pwdForm.validateFields();
+      const credsStr = localStorage.getItem('ssol_admin_credentials');
+      const creds = credsStr ? JSON.parse(credsStr) : { username: 'admin', password: 'ssol2024' };
+      if (values.oldPassword !== creds.password) {
+        message.error('原密码错误');
+        return;
+      }
+      if (values.newPassword.length < 6) {
+        message.error('新密码至少6位');
+        return;
+      }
+      localStorage.setItem('ssol_admin_credentials', JSON.stringify({ ...creds, password: values.newPassword }));
+      message.success('密码已修改，下次登录请用新密码');
+      setPwdModalOpen(false);
+      pwdForm.resetFields();
+    } catch { /* ignore */ }
+  };
 
   const addKeyword = () => {
     if (newKeyword.trim() && !keywords.includes(newKeyword.trim())) {
@@ -178,6 +201,14 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
             <DashboardOutlined style={{ color: '#1677ff', marginRight: 8 }} />
             管理后台
           </Title>
+          <Button
+            type="link"
+            icon={<KeyOutlined />}
+            onClick={() => setPwdModalOpen(true)}
+            style={{ fontSize: 14 }}
+          >
+            修改密码
+          </Button>
         </div>
 
         {/* 统计卡片 */}
@@ -320,6 +351,28 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
           </Col>
         </Row>
       </div>
+
+      {/* 修改密码弹窗 */}
+      <Modal
+        title={<span><LockOutlined style={{ color: '#1677ff', marginRight: 8 }} />修改管理员密码</span>}
+        open={pwdModalOpen}
+        onCancel={() => { setPwdModalOpen(false); pwdForm.resetFields(); }}
+        onOk={handleChangePassword}
+        okText="确认修改"
+        cancelText="取消"
+      >
+        <Form form={pwdForm} layout="vertical" size="large" style={{ paddingTop: 8 }}>
+          <Form.Item name="oldPassword" label="原密码" rules={[{ required: true, message: '请输入原密码' }]}>
+            <Input.Password prefix={<LockOutlined />} placeholder="请输入原密码" />
+          </Form.Item>
+          <Form.Item name="newPassword" label="新密码" rules={[{ required: true, message: '请输入新密码' }]}>
+            <Input.Password prefix={<LockOutlined />} placeholder="至少6位" />
+          </Form.Item>
+          <Form.Item name="confirmPassword" label="确认新密码" rules={[{ required: true, message: '请再次输入' }]}>
+            <Input.Password prefix={<LockOutlined />} placeholder="再次输入新密码" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { Upload, Button, Input, Divider } from 'antd';
+import { useState, useEffect, useCallback } from 'react';
+import { Upload, Button, Input, Divider, message, Popconfirm } from 'antd';
 import {
   PlusOutlined, EditOutlined, CameraOutlined, DeleteOutlined,
   PhoneOutlined, MailOutlined, EnvironmentOutlined,
-  LinkOutlined,
+  LinkOutlined, SaveOutlined, UndoOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 
@@ -36,6 +36,8 @@ interface ResumeData {
     skills: string;
   };
 }
+
+const RESUME_STORAGE_KEY = 'ssol_resume_data';
 
 const defaultResume: ResumeData = {
   name: '点这里填写姓名',
@@ -75,8 +77,39 @@ const defaultResume: ResumeData = {
 };
 
 export default function ResumeEditor() {
-  const [resume, setResume] = useState<ResumeData>(defaultResume);
+  // 从 localStorage 加载已保存的简历
+  const loadSavedResume = (): ResumeData => {
+    try {
+      const saved = localStorage.getItem(RESUME_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch { /* ignore */ }
+    return defaultResume;
+  };
+
+  const [resume, setResume] = useState<ResumeData>(loadSavedResume);
   const [editingField, setEditingField] = useState<string | null>(null);
+  const [saved, setSaved] = useState(true);
+
+  // 检测是否有未保存的修改
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(RESUME_STORAGE_KEY);
+      const savedData = saved ? JSON.parse(saved) : defaultResume;
+      setSaved(JSON.stringify(resume) === JSON.stringify(savedData));
+    } catch { setSaved(false); }
+  }, [resume]);
+
+  // 离开页面前提醒保存
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!saved) {
+        e.preventDefault();
+        e.returnValue = '简历有未保存的修改，确定要离开吗？';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [saved]);
 
   const updateField = (field: keyof ResumeData, value: any) => {
     setResume((prev) => ({ ...prev, [field]: value }));
@@ -118,16 +151,44 @@ export default function ResumeEditor() {
     updateField('skills', [...resume.skills, { name: '新技能', level: 50 }]);
   };
 
+  const handleSave = useCallback(() => {
+    try {
+      localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(resume));
+      message.success('简历已保存');
+      setSaved(true);
+    } catch {
+      message.error('保存失败，请重试');
+    }
+  }, [resume]);
+
+  const handleReset = useCallback(() => {
+    setResume(defaultResume);
+    localStorage.removeItem(RESUME_STORAGE_KEY);
+    message.info('已恢复默认模板');
+    setSaved(true);
+  }, []);
+
+  const removeLink = (idx: number) => {
+    const newLinks = resume.links.filter((_, i) => i !== idx);
+    // 删除后至少保留一个空输入框
+    if (newLinks.length === 0) {
+      updateField('links', [{ label: '', url: '' }]);
+    } else {
+      updateField('links', newLinks);
+    }
+  };
+
   const removeSkill = (idx: number) => {
-    updateField('skills', resume.skills.filter((_, i) => i !== idx));
+    const newSkills = resume.skills.filter((_, i) => i !== idx);
+    if (newSkills.length === 0) {
+      updateField('skills', [{ name: '', level: 50 }]);
+    } else {
+      updateField('skills', newSkills);
+    }
   };
 
   const addLink = () => {
     updateField('links', [...resume.links, { label: '新链接', url: '' }]);
-  };
-
-  const removeLink = (idx: number) => {
-    updateField('links', resume.links.filter((_, i) => i !== idx));
   };
 
   return (
@@ -135,23 +196,34 @@ export default function ResumeEditor() {
       {/* 顶部：照片 + 姓名 + 职位 */}
       <div className="resume-header">
         <div className="resume-photo-section">
-          {resume.photo ? (
-            <img src={resume.photo} alt="头像" className="resume-photo" />
-          ) : (
-            <div className="resume-photo-placeholder">
-              <CameraOutlined style={{ fontSize: 32, color: '#bbb' }} />
-              <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>点这里插入照片</div>
-            </div>
-          )}
           <Upload
             showUploadList={false}
             beforeUpload={handlePhotoUpload}
             accept="image/*"
           >
-            <Button size="small" icon={<EditOutlined />} style={{ marginTop: 8 }}>
-              更换照片
-            </Button>
+            {resume.photo ? (
+              <img src={resume.photo} alt="头像" className="resume-photo" style={{ cursor: 'pointer' }} />
+            ) : (
+              <div className="resume-photo-placeholder" style={{ cursor: 'pointer' }}>
+                <CameraOutlined style={{ fontSize: 32, color: '#bbb' }} />
+                <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>点击上传照片</div>
+              </div>
+            )}
           </Upload>
+          {resume.photo && (
+            <Button
+              size="small"
+              type="text"
+              danger
+              onClick={(e) => {
+                e.stopPropagation();
+                updateField('photo', '');
+              }}
+              style={{ marginTop: 4, fontSize: 12 }}
+            >
+              移除照片
+            </Button>
+          )}
         </div>
         <div className="resume-name-section">
           <Input
@@ -459,6 +531,29 @@ export default function ResumeEditor() {
             ))}
           </section>
         </div>
+      </div>
+
+      {/* 底部保存按钮 */}
+      <Divider style={{ margin: '20px 0 12px' }} />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingBottom: 16 }}>
+        <Popconfirm
+          title="确定恢复默认模板？"
+          description="当前编辑内容将被清除"
+          onConfirm={handleReset}
+          okText="确定"
+          cancelText="取消"
+        >
+          <Button icon={<UndoOutlined />} disabled={saved}>恢复默认</Button>
+        </Popconfirm>
+        <Button
+          type="primary"
+          icon={<SaveOutlined />}
+          onClick={handleSave}
+          disabled={saved}
+          size="large"
+        >
+          {saved ? '已保存' : '保存简历'}
+        </Button>
       </div>
     </div>
   );
