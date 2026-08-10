@@ -70,38 +70,31 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
   return (
     <>
       <nav className="navbar">
-        {/* Logo */}
-        <div className="navbar-logo" onClick={onGoHome} style={{ cursor: 'pointer' }}>
-          <PushpinIcon size={26} color="#1677ff" className="logo-icon" />
-          <span className="logo-text logo-drive-in">搜索在线</span>
+        {/* Logo区域：上方"搜索在线-ssol.cn"，下方标语 */}
+        <div className="navbar-logo-group" onClick={onGoHome} style={{ cursor: 'pointer' }}>
+          <div className="navbar-logo">
+            <PushpinIcon size={24} color="#fff" className="logo-icon" />
+            <div className="logo-text-group">
+              <span className="logo-text logo-drive-in">搜索在线 <span className="logo-url">ssol.cn</span></span>
+              <span className="logo-slogan">你身边的专业人才库</span>
+            </div>
+          </div>
         </div>
 
-        {/* 搜索框 */}
-        <div className="navbar-search">
-          <Input
-            placeholder="你手上的专业人才库"
-            prefix={<SearchOutlined style={{ color: '#999' }} />}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            onKeyPress={handleKeyPress}
-            onClick={handleSearchClick}
-            style={{ borderRadius: 20, cursor: 'pointer', maxWidth: 280 }}
-            allowClear
-            readOnly
-          />
-        </div>
-
-        {/* 桌面端按钮 */}
+        {/* 4个导航按钮：首页、搜索、登录、注册 */}
         <div className="navbar-actions navbar-desktop">
           <Button type="text" icon={<HomeOutlined />} onClick={onGoHome} className="nav-btn-sm">首页</Button>
+          <Button type="text" icon={<SearchOutlined />} onClick={handleSearchClick} className="nav-btn-sm">搜索</Button>
           {isLoggedIn ? (
             <>
               <Button type="text" icon={<UserOutlined />} onClick={onGoPersonal} className="nav-btn-sm">我的</Button>
-              <Button type="text" icon={<SettingOutlined />} onClick={onGoAdmin} className="nav-btn-sm">管理</Button>
               <Button type="text" icon={<LogoutOutlined />} onClick={onLogout} className="nav-btn-sm nav-btn-logout">退出</Button>
             </>
           ) : (
-            <Button type="text" size="small" icon={<UserAddOutlined />} onClick={() => setAuthModalOpen(true)} className="nav-btn-sm">登录</Button>
+            <>
+              <Button type="text" onClick={() => { setAuthModalOpen(false); onGoRegister?.(); }} className="nav-btn-sm nav-btn-register">注册</Button>
+              <Button type="text" onClick={() => setAuthModalOpen(true)} className="nav-btn-sm nav-btn-login">登录</Button>
+            </>
           )}
         </div>
 
