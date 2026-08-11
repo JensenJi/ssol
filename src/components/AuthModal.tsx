@@ -8,7 +8,7 @@ interface AuthModalProps {
   onLogin: (email: string, password: string) => Promise<{ error: any }>;
   onRegister: (email: string, password: string, displayName: string) => Promise<{ error: any }>;
   onResetPassword: (email: string) => Promise<{ error: any }>;
-  onSuccess: (email?: string) => void;
+  onSuccess: (email?: string, isRegister?: boolean) => void;
   initialMode?: 'login' | 'register';
 }
 
@@ -75,10 +75,9 @@ export default function AuthModal({ open, onClose, onLogin, onRegister, onResetP
         }
         return;
       }
-      message.success('注册成功！请登录');
-      setMode('login');
-      form.setFieldsValue({ email: values.email });
-      form.resetFields(['password', 'confirmPassword']);
+      message.success('注册成功！');
+      form.resetFields();
+      onSuccess(values.email, true);
     } catch {
       // validation failed
     }

@@ -53,7 +53,6 @@ function App() {
   const [authInitialMode, setAuthInitialMode] = useState<'login' | 'register'>('login');
   const [adminSetupOpen, setAdminSetupOpen] = useState(false);
   const needAdminSetupRef = useRef(false);
-  const pendingPageRef = useRef<'register' | null>(null);
 
   // Supabase 认证
   const { user: supabaseUser, configured: supabaseConfigured, signUp, signIn, signOut, resetPassword } = useSupabaseAuth();
@@ -112,6 +111,14 @@ function App() {
         localStorage.setItem('ssol_admin_emails', JSON.stringify(emails));
       }
     } catch { /* ignore */ }
+  }
+
+  function getAdminEmails(): string[] {
+    try {
+      return JSON.parse(localStorage.getItem('ssol_admin_emails') || '[]');
+    } catch {
+      return [];
+    }
   }
 
   // 登录状态持久化
@@ -421,40 +428,64 @@ function App() {
     }
   }, [currentUser, supabaseConfigured]);
 
-  // 导航栏注册按钮：未登录→打开Supabase注册弹窗；已登录→直接填资料
+  // 导航栏注册按钮：打开 Supabase 注册弹窗（注册标签页）
   const handleNavRegister = useCallback(() => {
-    if (!isLoggedIn) {
-      pendingPageRef.current = 'register';
-      setAuthInitialMode('register');
-      setAuthModalOpen(true);
-    } else {
-      setCurrentPage('register');
-    }
-  }, [isLoggedIn]);
+    setAuthInitialMode('register');
+    setAuthModalOpen(true);
+  }, []);
 
-  // Supabase 登录成功回调 — 自动识别管理员角色
-  const handleAuthSuccess = useCallback((email?: string) => {
+  // Supabase 登录/注册成功回调
+  const handleAuthSuccess = useCallback((email?: string, isRegister?: boolean) => {
     setAuthModalOpen(false);
     setIsLoggedIn(true);
-    // 检查是否为管理员，自动路由到管理后台或个人中心
-    if (email && isAdminEmail(email)) {
-      setIsAdminLoggedIn(true);
-      setCurrentPage('admin');
-      needAdminSetupRef.current = false;
-    } else if (needAdminSetupRef.current && email) {
-      // 登录成功后自动设置为管理员
-      addAdminEmail(email);
-      setIsAdminLoggedIn(true);
-      setCurrentPage('admin');
-      needAdminSetupRef.current = false;
-      message.success('管理员身份已设置，进入管理后台');
-    } else if (pendingPageRef.current === 'register') {
-      // 注册流程：登录后去填写个人资料
-      pendingPageRef.current = null;
-      setCurrentPage('register');
-    } else {
-      setCurrentPage('personal');
+
+    // 注册时：创建本地用户记录，供管理员在后台查看和审核
+    if (isRegister && email) {
+      const newUserId = `user-${Date.now()}`;
+      const newUser = {
+        id: newUserId,
+        name: email.split('@')[0],
+        keywords: [],
+        likes: 0,
+        verified: false,
+        createdAt: new Date().toISOString(),
+      } as Partial<Doctor>;
+      (newUser as any).email = email;
+      setPendingUsers((prev) => prev.find((u) => u.id === newUserId) ? prev : [...prev, newUser]);
+      setRegisteredUsers((prev) => prev.find((u) => u.id === newUserId) ? prev : [...prev, newUser]);
+      setCurrentUser(newUser);
     }
+
+    // 管理员自动识别与首次提升
+    if (email) {
+      const adminEmails = getAdminEmails();
+      if (adminEmails.length === 0) {
+        // 首次设置：无管理员时自动提升当前用户
+        addAdminEmail(email);
+        setIsAdminLoggedIn(true);
+        setCurrentPage('admin');
+        needAdminSetupRef.current = false;
+        message.success('您已成为首位管理员，进入管理后台');
+        return;
+      }
+      if (isAdminEmail(email)) {
+        setIsAdminLoggedIn(true);
+        setCurrentPage('admin');
+        needAdminSetupRef.current = false;
+        return;
+      }
+      if (needAdminSetupRef.current) {
+        addAdminEmail(email);
+        setIsAdminLoggedIn(true);
+        setCurrentPage('admin');
+        needAdminSetupRef.current = false;
+        message.success('管理员身份已设置，进入管理后台');
+        return;
+      }
+    }
+
+    // 普通用户：进入个人中心
+    setCurrentPage('personal');
     if (favTarget) { setFavorites((prev) => [...prev, favTarget.id]); message.success(`已收藏 ${favTarget.name}`); setFavTarget(null); }
   }, [favTarget]);
 
@@ -589,16 +620,30 @@ function App() {
     setCurrentPage('admin');
   }, []);
 
-  // 导航栏点击"管理后台"：管理员直接进入后台
+  // 导航栏点击"管理后台"
   const handleGoAdmin = useCallback(() => {
     if (isAdminLoggedIn) {
       setCurrentPage('admin');
     } else if (isLoggedIn) {
-      setAdminSetupOpen(true);
+      // 已登录但非管理员：检查是否为首次设置
+      const adminEmails = getAdminEmails();
+      if (adminEmails.length === 0) {
+        // 无管理员，自动提升当前用户
+        if (supabaseUser?.email) {
+          addAdminEmail(supabaseUser.email);
+          setIsAdminLoggedIn(true);
+          setCurrentPage('admin');
+          message.success('您已成为首位管理员，进入管理后台');
+        } else {
+          setAdminSetupOpen(true);
+        }
+      } else {
+        setAdminSetupOpen(true);
+      }
     } else {
       setAuthModalOpen(true);
     }
-  }, [isAdminLoggedIn, isLoggedIn]);
+  }, [isAdminLoggedIn, isLoggedIn, supabaseUser]);
 
   const handleAdminLogout = useCallback(() => {
     setIsAdminLoggedIn(false);
