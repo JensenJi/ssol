@@ -8,11 +8,10 @@ interface AuthModalProps {
   onLogin: (email: string, password: string) => Promise<{ error: any }>;
   onRegister: (email: string, password: string, displayName: string) => Promise<{ error: any }>;
   onResetPassword: (email: string) => Promise<{ error: any }>;
-  onSuccess: () => void;
-  hideRegister?: boolean;
+  onSuccess: (email?: string) => void;
 }
 
-export default function AuthModal({ open, onClose, onLogin, onRegister, onResetPassword, onSuccess, hideRegister = false }: AuthModalProps) {
+export default function AuthModal({ open, onClose, onLogin, onRegister, onResetPassword, onSuccess }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'register' | 'reset'>('login');
   const [loading, setLoading] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -41,7 +40,7 @@ export default function AuthModal({ open, onClose, onLogin, onRegister, onResetP
       }
       message.success('登录成功！');
       form.resetFields();
-      onSuccess();
+      onSuccess(values.email);
     } catch {
       // validation failed
     }
@@ -141,8 +140,6 @@ export default function AuthModal({ open, onClose, onLogin, onRegister, onResetP
             <Input prefix={<MailOutlined />} placeholder="your@email.com" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} size="large" style={{ marginBottom: 16 }} />
             <Button type="primary" onClick={handleResetPassword} loading={loading} block size="large">发送重置链接</Button>
           </div>
-        ) : hideRegister ? (
-          tabItems[0].children
         ) : (
           <Tabs
             activeKey={mode}

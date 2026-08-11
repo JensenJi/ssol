@@ -24,11 +24,12 @@ interface NavbarProps {
   onLogout?: () => void;
   ipLocation?: { name: string; lat: number; lng: number } | null;
   isLoggedIn?: boolean;
+  isAdmin?: boolean;
   onGoHome?: () => void;
   showSlogan?: boolean;
 }
 
-export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, onGoLogin, onGoAdmin, onGoPersonal, onGoUsers, onLogout, ipLocation, isLoggedIn, onGoHome, showSlogan = true }: NavbarProps) {
+export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, onGoRegister, onGoLogin, onGoAdmin, onGoPersonal, onGoUsers, onLogout, ipLocation, isLoggedIn, isAdmin, onGoHome, showSlogan = true }: NavbarProps) {
   const [keyword, setKeyword] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogKeyword, setDialogKeyword] = useState('');
@@ -88,6 +89,9 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
           {isLoggedIn ? (
             <>
               <Button type="text" icon={<UserOutlined />} onClick={onGoPersonal} className="nav-btn-sm">我的</Button>
+              {isAdmin && (
+                <Button type="text" icon={<SettingOutlined />} onClick={onGoAdmin} className="nav-btn-sm" style={{ color: '#722ed1' }}>管理后台</Button>
+              )}
               <Button type="text" icon={<LogoutOutlined />} onClick={onLogout} className="nav-btn-sm nav-btn-logout">退出</Button>
             </>
           ) : (
@@ -120,8 +124,10 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
           {isLoggedIn ? (
             <>
               <Button type="text" icon={<UserOutlined />} onClick={() => handleMenuAction(() => onGoPersonal?.())} block style={{ justifyContent: 'flex-start', height: 44 }}>个人中心</Button>
+              {isAdmin && (
+                <Button type="text" icon={<SettingOutlined />} onClick={() => handleMenuAction(() => onGoAdmin?.())} block style={{ justifyContent: 'flex-start', height: 44, color: '#722ed1' }}>管理后台</Button>
+              )}
               <Button type="text" icon={<TeamOutlined />} onClick={() => handleMenuAction(() => onGoUsers?.())} block style={{ justifyContent: 'flex-start', height: 44 }}>用户管理</Button>
-              <Button type="text" icon={<SettingOutlined />} onClick={() => handleMenuAction(() => onGoAdmin?.())} block style={{ justifyContent: 'flex-start', height: 44 }}>管理后台</Button>
               <div style={{ borderTop: '1px solid #f0f0f0', margin: '8px 0' }} />
               <Button type="text" danger icon={<LogoutOutlined />} onClick={() => handleMenuAction(() => onLogout?.())} block style={{ justifyContent: 'flex-start', height: 44 }}>退出登录</Button>
             </>

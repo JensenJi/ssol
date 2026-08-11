@@ -8,7 +8,6 @@ import ResultTable from './components/ResultTable';
 import UserProfile from './components/UserProfile';
 import RegisterPage from './components/RegisterPage';
 import AdminDashboard from './components/AdminDashboard';
-import AdminLogin from './components/AdminLogin';
 import PersonalCenter from './components/PersonalCenter';
 import UserManagement from './components/UserManagement';
 import { userAPI, visitorAPI } from './lib/cloudbase';
@@ -51,6 +50,7 @@ function App() {
   const [favTarget, setFavTarget] = useState<Doctor | null>(null);
   const [deviceInfo] = useState(detectDeviceInfo);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [adminSetupOpen, setAdminSetupOpen] = useState(false);
 
   // Supabase 认证
   const { user: supabaseUser, configured: supabaseConfigured, signUp, signIn, signOut, resetPassword } = useSupabaseAuth();
@@ -70,7 +70,7 @@ function App() {
       }
     }
   }, [supabaseUser]);
-  const [currentPage, setCurrentPage] = useState<'home' | 'register' | 'admin' | 'adminLogin' | 'personal' | 'users'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'register' | 'admin' | 'personal' | 'users'>('home');
   const [currentUser, setCurrentUser] = useState<Partial<Doctor> | null>(() => {
     const saved = localStorage.getItem('ssol_currentUser');
     return saved ? JSON.parse(saved) : null;
@@ -98,6 +98,17 @@ function App() {
     } catch {
       return false;
     }
+  }
+
+  function addAdminEmail(email: string) {
+    try {
+      const emails = JSON.parse(localStorage.getItem('ssol_admin_emails') || '[]');
+      const lower = email.toLowerCase();
+      if (!emails.includes(lower)) {
+        emails.push(lower);
+        localStorage.setItem('ssol_admin_emails', JSON.stringify(emails));
+      }
+    } catch { /* ignore */ }
   }
 
   // 登录状态持久化
@@ -279,7 +290,14 @@ function App() {
   useEffect(() => {
     const checkAdminHash = () => {
       if (window.location.hash === '#/admin') {
-        setCurrentPage('adminLogin');
+        if (!isLoggedIn) {
+          setAuthModalOpen(true);
+        } else if (isAdminEmail(supabaseUser?.email)) {
+          setIsAdminLoggedIn(true);
+          setCurrentPage('admin');
+        } else {
+          setAdminSetupOpen(true);
+        }
       }
     };
     checkAdminHash();
@@ -287,7 +305,14 @@ function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'A') {
         e.preventDefault();
-        setCurrentPage('adminLogin');
+        if (!isLoggedIn) {
+          setAuthModalOpen(true);
+        } else if (isAdminEmail(supabaseUser?.email)) {
+          setIsAdminLoggedIn(true);
+          setCurrentPage('admin');
+        } else {
+          setAdminSetupOpen(true);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -295,7 +320,7 @@ function App() {
       window.removeEventListener('hashchange', checkAdminHash);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [isLoggedIn, supabaseUser]);
 
   const handleSearch = useCallback((keyword: string) => setSearchKeyword(keyword.trim()), []);
 
@@ -392,12 +417,29 @@ function App() {
     }
   }, [currentUser, supabaseConfigured]);
 
-  // Supabase 登录成功回调
-  const handleAuthSuccess = useCallback(() => {
+  // Supabase 登录成功回调 — 自动识别管理员角色
+  const handleAuthSuccess = useCallback((email?: string) => {
     setAuthModalOpen(false);
     setIsLoggedIn(true);
+    // 检查是否为管理员，自动路由到管理后台或个人中心
+    if (email && isAdminEmail(email)) {
+      setIsAdminLoggedIn(true);
+      setCurrentPage('admin');
+    } else {
+      setCurrentPage('personal');
+    }
     if (favTarget) { setFavorites((prev) => [...prev, favTarget.id]); message.success(`已收藏 ${favTarget.name}`); setFavTarget(null); }
   }, [favTarget]);
+
+  // 设置为管理员（通过统一登录后自动触发）
+  const handleAdminSetup = useCallback(async () => {
+    if (!supabaseUser?.email) return;
+    addAdminEmail(supabaseUser.email);
+    setIsAdminLoggedIn(true);
+    setCurrentPage('admin');
+    setAdminSetupOpen(false);
+    message.success('管理员身份已设置，进入管理后台');
+  }, [supabaseUser]);
 
   const allKeywords = useMemo(() => {
     const freqMap = new Map<string, number>();
@@ -491,10 +533,12 @@ function App() {
 
   const handleLogout = useCallback(() => {
     setIsLoggedIn(false);
+    setIsAdminLoggedIn(false);
     setCurrentUser(null);
     setCurrentPage('home');
     localStorage.removeItem('ssol_loggedIn');
     localStorage.removeItem('ssol_currentUser');
+    localStorage.removeItem('ssol_adminLoggedIn');
     if (supabaseConfigured) signOut();
     message.success('已退出登录');
   }, [supabaseConfigured, signOut]);
@@ -512,14 +556,16 @@ function App() {
     setCurrentPage('admin');
   }, []);
 
-  // 导航栏点击"管理后台"：如果已登录直接进后台，否则显示登录页
+  // 导航栏点击"管理后台"：管理员直接进入后台
   const handleGoAdmin = useCallback(() => {
-    if (isAdminLoggedIn) {
+    if (isAdminLoggedIn && isAdminEmail(supabaseUser?.email)) {
       setCurrentPage('admin');
+    } else if (isLoggedIn) {
+      setAdminSetupOpen(true);
     } else {
-      setCurrentPage('adminLogin');
+      setAuthModalOpen(true);
     }
-  }, [isAdminLoggedIn]);
+  }, [isAdminLoggedIn, isLoggedIn, supabaseUser]);
 
   const handleAdminLogout = useCallback(() => {
     setIsAdminLoggedIn(false);
@@ -594,6 +640,7 @@ function App() {
             onGoUsers={() => setCurrentPage('users')}
             onLogout={handleLogout}
             ipLocation={ipLocation} isLoggedIn={isLoggedIn}
+            isAdmin={isAdminEmail(supabaseUser?.email)}
           />
           <RegisterPage onBack={() => setCurrentPage('home')} onRegister={handleRegister} onGoLogin={handleNavLogin} ipLocation={ipLocation} />
         </>
@@ -619,22 +666,6 @@ function App() {
           onDeleteUser={handleDeleteUser}
         />
       )}
-      {currentPage === 'adminLogin' && !isAdminLoggedIn && (
-        <>
-          <Navbar
-            onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
-            onGoRegister={() => setCurrentPage('register')} onGoLogin={handleNavLogin}
-            onGoHome={() => setCurrentPage('home')}
-            onGoAdmin={handleGoAdmin}
-            onGoPersonal={() => setCurrentPage('personal')}
-            onGoUsers={() => setCurrentPage('users')}
-            onLogout={handleLogout}
-            ipLocation={ipLocation} isLoggedIn={isLoggedIn}
-            showSlogan={false}
-          />
-          <AdminLogin onBack={() => setCurrentPage('home')} onLogin={handleAdminLogin} />
-        </>
-      )}
       {currentPage === 'admin' && isAdminLoggedIn && (
         <>
           <Navbar
@@ -646,6 +677,7 @@ function App() {
             onGoUsers={() => setCurrentPage('users')}
             onLogout={handleAdminLogout}
             ipLocation={ipLocation} isLoggedIn={true}
+            isAdmin={true}
             showSlogan={false}
           />
           <AdminDashboard onBack={() => setCurrentPage('home')} pendingUsers={pendingUsers} registeredUsers={registeredUsers} onApprove={handleApprove} onReject={handleReject} />
@@ -662,6 +694,7 @@ function App() {
             onGoUsers={() => setCurrentPage('users')}
             onLogout={handleLogout}
             ipLocation={ipLocation} isLoggedIn={isLoggedIn}
+            isAdmin={isAdminEmail(supabaseUser?.email)}
           />
         <div className="main-content">
           <div className="content-left full-width">
@@ -698,7 +731,7 @@ function App() {
         </div>
       )}
 
-      {/* Supabase 邮箱登录弹窗 */}
+      {/* Supabase 统一登录弹窗 */}
       <AuthModal
         open={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
@@ -706,8 +739,21 @@ function App() {
         onRegister={signUp}
         onResetPassword={resetPassword}
         onSuccess={handleAuthSuccess}
-        hideRegister={true}
       />
+      {/* 管理员身份设置弹窗 */}
+      <Modal
+        title="设置为管理员"
+        open={adminSetupOpen}
+        onCancel={() => setAdminSetupOpen(false)}
+        onOk={handleAdminSetup}
+        okText="确认设置"
+        cancelText="取消"
+      >
+        <div style={{ padding: '16px 0' }}>
+          <p>您的账号 <strong>{supabaseUser?.email}</strong> 尚未设置为管理员。</p>
+          <p style={{ color: '#666' }}>点击"确认设置"后，该账号将获得管理员权限，可以管理网站后台。</p>
+        </div>
+      </Modal>
     </ConfigProvider>
   );
 }
