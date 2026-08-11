@@ -14,10 +14,11 @@ const categories = ['疑难杂症', '稀有工种', '非遗手艺', '农业专�
 interface RegisterPageProps {
   onBack: () => void;
   onRegister: (user: Partial<Doctor>) => void;
+  onGoLogin?: () => void;
   ipLocation?: { name: string } | null;
 }
 
-export default function RegisterPage({ onBack, onRegister, ipLocation }: RegisterPageProps) {
+export default function RegisterPage({ onBack, onRegister, onGoLogin, ipLocation }: RegisterPageProps) {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [isDoctor, setIsDoctor] = useState(false);
@@ -156,7 +157,10 @@ export default function RegisterPage({ onBack, onRegister, ipLocation }: Registe
               提交申请
             </Button>
 
-            <Paragraph type="secondary" style={{ fontSize: 12, textAlign: 'center', marginTop: 16, marginBottom: 0 }}>
+            <Paragraph type="secondary" style={{ fontSize: 13, textAlign: 'center', marginTop: 16, marginBottom: 0 }}>
+              已有账号？<a onClick={onGoLogin} style={{ color: '#1677ff', cursor: 'pointer', fontWeight: 600 }}>立即登录</a>
+            </Paragraph>
+            <Paragraph type="secondary" style={{ fontSize: 12, textAlign: 'center', marginTop: 8, marginBottom: 0 }}>
               根据《网络安全法》和《个人信息保护法》，您的信息将被严格保密，仅用于平台审核和展示。
             </Paragraph>
           </Form>

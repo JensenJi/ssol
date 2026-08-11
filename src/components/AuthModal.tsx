@@ -75,6 +75,9 @@ export default function AuthModal({ open, onClose, onLogin, onRegister, onSucces
           <Form.Item name="password" label="密码" rules={[{ required: true, min: 6, message: '密码至少6位' }]}>
             <Input.Password prefix={<LockOutlined />} placeholder="输入密码" />
           </Form.Item>
+          <div style={{ textAlign: 'right', marginBottom: 8 }}>
+            <a onClick={() => message.info('请联系管理员重置密码：contact@ssol.cn')} style={{ color: '#1677ff', fontSize: 13, cursor: 'pointer' }}>忘记密码？</a>
+          </div>
           <Button type="primary" onClick={handleLogin} loading={loading} block size="large" style={{ marginTop: 8 }}>
             登录
           </Button>

@@ -563,7 +563,7 @@ function App() {
             onLogout={handleLogout}
             ipLocation={ipLocation} isLoggedIn={isLoggedIn}
           />
-          <RegisterPage onBack={() => setCurrentPage('home')} onRegister={handleRegister} ipLocation={ipLocation} />
+          <RegisterPage onBack={() => setCurrentPage('home')} onRegister={handleRegister} onGoLogin={handleNavLogin} ipLocation={ipLocation} />
         </>
       )}
       {currentPage === 'personal' && currentUser && (

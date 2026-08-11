@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Input, Button, Modal, Select, Drawer } from 'antd';
-import { SearchOutlined, UserAddOutlined, UserOutlined, TeamOutlined, AimOutlined, EnvironmentOutlined, HomeOutlined, LockOutlined, LogoutOutlined, MenuOutlined, SettingOutlined } from '@ant-design/icons';
+import { SearchOutlined, UserAddOutlined, UserOutlined, TeamOutlined, AimOutlined, EnvironmentOutlined, HomeOutlined, LockOutlined, LoginOutlined, LogoutOutlined, MenuOutlined, SettingOutlined } from '@ant-design/icons';
 import PushpinIcon from './PushpinIcon';
 
 const distanceData = [
@@ -92,8 +92,8 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
             </>
           ) : (
             <>
-              <Button type="text" onClick={() => { setAuthModalOpen(false); onGoRegister?.(); }} className="nav-btn-sm nav-btn-register">注册</Button>
-              <Button type="text" onClick={onGoLogin} className="nav-btn-sm nav-btn-login">登录</Button>
+              <Button type="text" icon={<UserAddOutlined />} onClick={() => { setAuthModalOpen(false); onGoRegister?.(); }} className="nav-btn-sm nav-btn-register">注册</Button>
+              <Button type="text" icon={<LoginOutlined />} onClick={onGoLogin} className="nav-btn-sm nav-btn-login">登录</Button>
             </>
           )}
         </div>
