@@ -51,6 +51,7 @@ function App() {
   const [deviceInfo] = useState(detectDeviceInfo);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [adminSetupOpen, setAdminSetupOpen] = useState(false);
+  const needAdminSetupRef = useRef(false);
 
   // Supabase 认证
   const { user: supabaseUser, configured: supabaseConfigured, signUp, signIn, signOut, resetPassword } = useSupabaseAuth();
@@ -425,6 +426,14 @@ function App() {
     if (email && isAdminEmail(email)) {
       setIsAdminLoggedIn(true);
       setCurrentPage('admin');
+      needAdminSetupRef.current = false;
+    } else if (needAdminSetupRef.current && email) {
+      // 登录成功后自动设置为管理员
+      addAdminEmail(email);
+      setIsAdminLoggedIn(true);
+      setCurrentPage('admin');
+      needAdminSetupRef.current = false;
+      message.success('管理员身份已设置，进入管理后台');
     } else {
       setCurrentPage('personal');
     }
@@ -433,12 +442,18 @@ function App() {
 
   // 设置为管理员（通过统一登录后自动触发）
   const handleAdminSetup = useCallback(async () => {
-    if (!supabaseUser?.email) return;
-    addAdminEmail(supabaseUser.email);
-    setIsAdminLoggedIn(true);
-    setCurrentPage('admin');
     setAdminSetupOpen(false);
-    message.success('管理员身份已设置，进入管理后台');
+    if (supabaseUser?.email) {
+      // Supabase 已登录，直接设置
+      addAdminEmail(supabaseUser.email);
+      setIsAdminLoggedIn(true);
+      setCurrentPage('admin');
+      message.success('管理员身份已设置，进入管理后台');
+    } else {
+      // Supabase 未登录，先打开登录弹窗，登录后自动完成设置
+      needAdminSetupRef.current = true;
+      setAuthModalOpen(true);
+    }
   }, [supabaseUser]);
 
   const allKeywords = useMemo(() => {
@@ -558,14 +573,14 @@ function App() {
 
   // 导航栏点击"管理后台"：管理员直接进入后台
   const handleGoAdmin = useCallback(() => {
-    if (isAdminLoggedIn && isAdminEmail(supabaseUser?.email)) {
+    if (isAdminLoggedIn) {
       setCurrentPage('admin');
     } else if (isLoggedIn) {
       setAdminSetupOpen(true);
     } else {
       setAuthModalOpen(true);
     }
-  }, [isAdminLoggedIn, isLoggedIn, supabaseUser]);
+  }, [isAdminLoggedIn, isLoggedIn]);
 
   const handleAdminLogout = useCallback(() => {
     setIsAdminLoggedIn(false);
@@ -634,7 +649,7 @@ function App() {
         <>
           <Navbar
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
-            onGoRegister={() => {}} onGoHome={() => setCurrentPage('home')}
+            onGoRegister={() => {}} onGoLogin={handleNavLogin} onGoHome={() => setCurrentPage('home')}
             onGoAdmin={handleGoAdmin}
             onGoPersonal={() => setCurrentPage('personal')}
             onGoUsers={() => setCurrentPage('users')}

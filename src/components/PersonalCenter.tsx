@@ -253,10 +253,11 @@ export default function PersonalCenter({ onBack, user, favorites, allDoctors, on
         {/* 账号安全 */}
         {tab === 'security' && (
           <Card title="修改密码">
-            {!isSupabaseConfigured ? (
+            {!isSupabaseConfigured() ? (
               <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
                 <LockOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-                <p>Supabase 认证服务未配置，无法修改密码</p>
+                <p>认证服务未配置，无法修改密码</p>
+                <p style={{ fontSize: 12 }}>请联系管理员配置 Supabase</p>
               </div>
             ) : (
               <div style={{ maxWidth: 480 }}>
@@ -282,6 +283,12 @@ export default function PersonalCenter({ onBack, user, favorites, allDoctors, on
                           return;
                         }
                         setPwdLoading(true);
+                        const { data } = await supabase.auth.getSession();
+                        if (!data.session) {
+                          setPwdLoading(false);
+                          message.error('请先登录后再修改密码');
+                          return;
+                        }
                         const { error } = await supabase.auth.updateUser({ password: values.newPassword });
                         setPwdLoading(false);
                         if (error) {
