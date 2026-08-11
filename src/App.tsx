@@ -666,13 +666,14 @@ function App() {
         </div>
       )}
 
-      {/* Supabase 邮箱登录/注册弹窗 */}
+      {/* Supabase 邮箱登录弹窗 */}
       <AuthModal
         open={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         onLogin={signIn}
         onRegister={signUp}
         onSuccess={handleAuthSuccess}
+        hideRegister={true}
       />
     </ConfigProvider>
   );

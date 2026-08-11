@@ -8,9 +8,10 @@ interface AuthModalProps {
   onLogin: (email: string, password: string) => Promise<{ error: any }>;
   onRegister: (email: string, password: string, displayName: string) => Promise<{ error: any }>;
   onSuccess: () => void;
+  hideRegister?: boolean;
 }
 
-export default function AuthModal({ open, onClose, onLogin, onRegister, onSuccess }: AuthModalProps) {
+export default function AuthModal({ open, onClose, onLogin, onRegister, onSuccess, hideRegister = false }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
@@ -114,12 +115,16 @@ export default function AuthModal({ open, onClose, onLogin, onRegister, onSucces
       title={null}
     >
       <div style={{ padding: '16px 0 0' }}>
-        <Tabs
-          activeKey={mode}
-          onChange={(key) => { setMode(key as 'login' | 'register'); form.resetFields(); }}
-          centered
-          items={tabItems}
-        />
+        {hideRegister ? (
+          tabItems[0].children
+        ) : (
+          <Tabs
+            activeKey={mode}
+            onChange={(key) => { setMode(key as 'login' | 'register'); form.resetFields(); }}
+            centered
+            items={tabItems}
+          />
+        )}
       </div>
     </Modal>
   );
