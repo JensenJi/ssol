@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal, Input, Button, message, Tabs, Form } from 'antd';
 import { MailOutlined, LockOutlined, UserOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 
@@ -9,13 +9,22 @@ interface AuthModalProps {
   onRegister: (email: string, password: string, displayName: string) => Promise<{ error: any }>;
   onResetPassword: (email: string) => Promise<{ error: any }>;
   onSuccess: (email?: string) => void;
+  initialMode?: 'login' | 'register';
 }
 
-export default function AuthModal({ open, onClose, onLogin, onRegister, onResetPassword, onSuccess }: AuthModalProps) {
-  const [mode, setMode] = useState<'login' | 'register' | 'reset'>('login');
+export default function AuthModal({ open, onClose, onLogin, onRegister, onResetPassword, onSuccess, initialMode = 'login' }: AuthModalProps) {
+  const [mode, setMode] = useState<'login' | 'register' | 'reset'>(initialMode);
   const [loading, setLoading] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [form] = Form.useForm();
+
+  // 弹窗打开时同步到指定模式
+  useEffect(() => {
+    if (open) {
+      setMode(initialMode);
+      form.resetFields();
+    }
+  }, [open, initialMode]);
 
   const handleResetPassword = async () => {
     if (!resetEmail) { message.warning('请输入注册邮箱'); return; }

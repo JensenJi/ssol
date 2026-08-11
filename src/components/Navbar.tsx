@@ -134,7 +134,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
           ) : (
             <>
               <div style={{ borderTop: '1px solid #f0f0f0', margin: '8px 0' }} />
-              <Button type="primary" icon={<UserAddOutlined />} onClick={() => handleMenuAction(() => setAuthModalOpen(true))} block style={{ height: 44, borderRadius: 8 }}>注册 / 登录</Button>
+              <Button type="primary" icon={<UserAddOutlined />} onClick={() => handleMenuAction(() => onGoLogin?.())} block style={{ height: 44, borderRadius: 8 }}>注册 / 登录</Button>
             </>
           )}
         </div>
@@ -193,23 +193,6 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
         </div>
       </Modal>
 
-      {/* 注册/登录选择弹窗 */}
-      <Modal
-        open={authModalOpen}
-        onCancel={() => setAuthModalOpen(false)}
-        footer={null}
-        width={360}
-        title={null}
-      >
-        <div style={{ textAlign: 'center', padding: '20px 0 10px' }}>
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 24 }}>请选择</div>
-          <div style={{ display: 'flex', gap: 24, justifyContent: 'center' }}>
-            <Button type="primary" size="large" icon={<UserAddOutlined />} onClick={() => { setAuthModalOpen(false); onGoRegister?.(); }} style={{ width: 120, height: 48, fontSize: 16, borderRadius: 8 }}>注册</Button>
-            <Button size="large" icon={<UserOutlined />} onClick={() => { setAuthModalOpen(false); onGoLogin?.(); }} style={{ width: 120, height: 48, fontSize: 16, borderRadius: 8 }}>登录</Button>
-          </div>
-          <div style={{ fontSize: 12, color: '#999', marginTop: 16 }}>注册过的用户请直接登录，无需重复注册</div>
-        </div>
-      </Modal>
     </>
   );
 }

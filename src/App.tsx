@@ -50,8 +50,10 @@ function App() {
   const [favTarget, setFavTarget] = useState<Doctor | null>(null);
   const [deviceInfo] = useState(detectDeviceInfo);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authInitialMode, setAuthInitialMode] = useState<'login' | 'register'>('login');
   const [adminSetupOpen, setAdminSetupOpen] = useState(false);
   const needAdminSetupRef = useRef(false);
+  const pendingPageRef = useRef<'register' | null>(null);
 
   // Supabase 认证
   const { user: supabaseUser, configured: supabaseConfigured, signUp, signIn, signOut, resetPassword } = useSupabaseAuth();
@@ -401,6 +403,7 @@ function App() {
   // 导航栏登录按钮：Supabase配置时打开邮箱登录弹窗，否则直接登录
   const handleNavLogin = useCallback(() => {
     if (supabaseConfigured) {
+      setAuthInitialMode('login');
       setAuthModalOpen(true);
     } else {
       setIsLoggedIn(true);
@@ -418,6 +421,17 @@ function App() {
     }
   }, [currentUser, supabaseConfigured]);
 
+  // 导航栏注册按钮：未登录→打开Supabase注册弹窗；已登录→直接填资料
+  const handleNavRegister = useCallback(() => {
+    if (!isLoggedIn) {
+      pendingPageRef.current = 'register';
+      setAuthInitialMode('register');
+      setAuthModalOpen(true);
+    } else {
+      setCurrentPage('register');
+    }
+  }, [isLoggedIn]);
+
   // Supabase 登录成功回调 — 自动识别管理员角色
   const handleAuthSuccess = useCallback((email?: string) => {
     setAuthModalOpen(false);
@@ -434,6 +448,10 @@ function App() {
       setCurrentPage('admin');
       needAdminSetupRef.current = false;
       message.success('管理员身份已设置，进入管理后台');
+    } else if (pendingPageRef.current === 'register') {
+      // 注册流程：登录后去填写个人资料
+      pendingPageRef.current = null;
+      setCurrentPage('register');
     } else {
       setCurrentPage('personal');
     }
@@ -649,7 +667,7 @@ function App() {
         <>
           <Navbar
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
-            onGoRegister={() => {}} onGoLogin={handleNavLogin} onGoHome={() => setCurrentPage('home')}
+            onGoRegister={handleNavRegister} onGoLogin={handleNavLogin} onGoHome={() => setCurrentPage('home')}
             onGoAdmin={handleGoAdmin}
             onGoPersonal={() => setCurrentPage('personal')}
             onGoUsers={() => setCurrentPage('users')}
@@ -685,7 +703,7 @@ function App() {
         <>
           <Navbar
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
-            onGoRegister={() => setCurrentPage('register')} onGoLogin={handleNavLogin}
+            onGoRegister={handleNavRegister} onGoLogin={handleNavLogin}
             onGoHome={() => setCurrentPage('home')}
             onGoAdmin={() => setCurrentPage('admin')}
             onGoPersonal={() => setCurrentPage('personal')}
@@ -702,7 +720,7 @@ function App() {
         <div className="app">
           <Navbar
             onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
-            onGoRegister={() => setCurrentPage('register')} onGoLogin={handleNavLogin}
+            onGoRegister={handleNavRegister} onGoLogin={handleNavLogin}
             onGoHome={() => setCurrentPage('home')}
             onGoAdmin={handleGoAdmin}
             onGoPersonal={() => setCurrentPage('personal')}
@@ -754,6 +772,7 @@ function App() {
         onRegister={signUp}
         onResetPassword={resetPassword}
         onSuccess={handleAuthSuccess}
+        initialMode={authInitialMode}
       />
       {/* 管理员身份设置弹窗 */}
       <Modal
