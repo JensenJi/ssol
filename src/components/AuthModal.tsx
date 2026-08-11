@@ -1,20 +1,33 @@
 import { useState } from 'react';
 import { Modal, Input, Button, message, Tabs, Form } from 'antd';
-import { MailOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
+import { MailOutlined, LockOutlined, UserOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 
 interface AuthModalProps {
   open: boolean;
   onClose: () => void;
   onLogin: (email: string, password: string) => Promise<{ error: any }>;
   onRegister: (email: string, password: string, displayName: string) => Promise<{ error: any }>;
+  onResetPassword: (email: string) => Promise<{ error: any }>;
   onSuccess: () => void;
   hideRegister?: boolean;
 }
 
-export default function AuthModal({ open, onClose, onLogin, onRegister, onSuccess, hideRegister = false }: AuthModalProps) {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+export default function AuthModal({ open, onClose, onLogin, onRegister, onResetPassword, onSuccess, hideRegister = false }: AuthModalProps) {
+  const [mode, setMode] = useState<'login' | 'register' | 'reset'>('login');
   const [loading, setLoading] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
   const [form] = Form.useForm();
+
+  const handleResetPassword = async () => {
+    if (!resetEmail) { message.warning('请输入注册邮箱'); return; }
+    setLoading(true);
+    const { error } = await onResetPassword(resetEmail);
+    setLoading(false);
+    if (error) { message.error(error.message); return; }
+    message.success('重置链接已发送到邮箱，请查收');
+    setMode('login');
+    setResetEmail('');
+  };
 
   const handleLogin = async () => {
     try {
@@ -76,7 +89,7 @@ export default function AuthModal({ open, onClose, onLogin, onRegister, onSucces
             <Input.Password prefix={<LockOutlined />} placeholder="输入密码" />
           </Form.Item>
           <div style={{ textAlign: 'right', marginBottom: 8 }}>
-            <a onClick={() => message.info('请联系管理员重置密码：contact@ssol.cn')} style={{ color: '#1677ff', fontSize: 13, cursor: 'pointer' }}>忘记密码？</a>
+            <a onClick={() => setMode('reset')} style={{ color: '#1677ff', fontSize: 13, cursor: 'pointer' }}>忘记密码？</a>
           </div>
           <Button type="primary" onClick={handleLogin} loading={loading} block size="large" style={{ marginTop: 8 }}>
             登录
@@ -118,7 +131,17 @@ export default function AuthModal({ open, onClose, onLogin, onRegister, onSucces
       title={null}
     >
       <div style={{ padding: '16px 0 0' }}>
-        {hideRegister ? (
+        {mode === 'reset' ? (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => setMode('login')} style={{ color: '#1677ff', padding: 0 }}>返回登录</Button>
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>重置密码</div>
+            <div style={{ fontSize: 13, color: '#999', marginBottom: 20 }}>输入注册邮箱，我们将发送密码重置链接</div>
+            <Input prefix={<MailOutlined />} placeholder="your@email.com" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} size="large" style={{ marginBottom: 16 }} />
+            <Button type="primary" onClick={handleResetPassword} loading={loading} block size="large">发送重置链接</Button>
+          </div>
+        ) : hideRegister ? (
           tabItems[0].children
         ) : (
           <Tabs

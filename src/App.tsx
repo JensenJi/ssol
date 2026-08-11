@@ -53,7 +53,7 @@ function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   // Supabase 认证
-  const { user: supabaseUser, configured: supabaseConfigured, signUp, signIn, signOut } = useSupabaseAuth();
+  const { user: supabaseUser, configured: supabaseConfigured, signUp, signIn, signOut, resetPassword } = useSupabaseAuth();
 
   // Supabase 登录成功后同步状态
   useEffect(() => {
@@ -672,6 +672,7 @@ function App() {
         onClose={() => setAuthModalOpen(false)}
         onLogin={signIn}
         onRegister={signUp}
+        onResetPassword={resetPassword}
         onSuccess={handleAuthSuccess}
         hideRegister={true}
       />
