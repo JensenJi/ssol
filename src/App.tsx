@@ -89,6 +89,17 @@ function App() {
   const [ipLocation, setIpLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const dragRef = useRef<{ startY: number; startHeight: number; wasExpanded: boolean } | null>(null);
 
+  // 检查是否为管理员
+  function isAdminEmail(email?: string): boolean {
+    if (!email) return false;
+    try {
+      const emails = JSON.parse(localStorage.getItem('ssol_admin_emails') || '[]');
+      return emails.includes(email.toLowerCase());
+    } catch {
+      return false;
+    }
+  }
+
   // 登录状态持久化
   useEffect(() => {
     localStorage.setItem('ssol_loggedIn', String(isLoggedIn));
@@ -107,7 +118,7 @@ function App() {
     localStorage.setItem('ssol_registeredUsers', JSON.stringify(registeredUsers));
   }, [registeredUsers]);
 
-  // 从云开发加载认证专家数据
+  // 从云开发加载认证专家数据 + 初始化测试用户
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -125,6 +136,30 @@ function App() {
       }
     };
     loadData();
+
+    // 初始化测试用户（仅首次）
+    const testUserId = 'test-user-001';
+    const existingUsers = JSON.parse(localStorage.getItem('ssol_registeredUsers') || '[]');
+    if (!existingUsers.find((u: any) => u.id === testUserId)) {
+      const testUser = {
+        id: testUserId,
+        name: '测试用户',
+        email: 'test@ssol.cn',
+        category: '医生',
+        title: '测试医师',
+        hospital: '测试医院',
+        province: '北京',
+        city: '北京',
+        contact_phone: '13800138000',
+        keywords: ['测试', '内科', '全科'],
+        bio: '这是一个测试账号，用于测试所有用户功能。',
+        likes: 0,
+        verified: true,
+        createdAt: new Date().toISOString(),
+      };
+      setRegisteredUsers((prev) => [...prev, testUser]);
+      setExperts((prev) => [...prev, { ...testUser, location_lat: 39.9, location_lng: 116.4, visible_range: 99999 } as unknown as Doctor]);
+    }
 
     // 记录访客
     visitorAPI.recordVisit({
@@ -464,21 +499,18 @@ function App() {
     message.success('已退出登录');
   }, [supabaseConfigured, signOut]);
 
-  const handleAdminLogin = useCallback(() => {
+  const handleAdminLogin = useCallback((email?: string) => {
     setIsAdminLoggedIn(true);
-    // 确保 currentUser 存在，以便导航到个人中心等页面
-    if (!currentUser) {
-      const defaultUser: Partial<Doctor> = {
-        id: `admin-user-${Date.now()}`,
-        name: '管理员',
-        keywords: [],
-        likes: 0,
-        verified: false,
-      };
-      setCurrentUser(defaultUser);
-    }
+    // 确保 currentUser 存在
+    setCurrentUser((prev) => prev || {
+      id: `admin-user-${Date.now()}`,
+      name: '管理员',
+      keywords: [],
+      likes: 0,
+      verified: false,
+    });
     setCurrentPage('admin');
-  }, [currentUser]);
+  }, []);
 
   // 导航栏点击"管理后台"：如果已登录直接进后台，否则显示登录页
   const handleGoAdmin = useCallback(() => {
