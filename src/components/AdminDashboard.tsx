@@ -8,6 +8,7 @@ import {
   WarningOutlined, EditOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const { Title, Text } = Typography;
 
@@ -113,18 +114,24 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
   const handleChangePassword = async () => {
     try {
       const values = await pwdForm.validateFields();
-      const credsStr = localStorage.getItem('ssol_admin_credentials');
-      const creds = credsStr ? JSON.parse(credsStr) : { username: 'admin', password: 'ssol2024' };
-      if (values.oldPassword !== creds.password) {
-        message.error('原密码错误');
-        return;
-      }
       if (values.newPassword.length < 6) {
         message.error('新密码至少6位');
         return;
       }
-      localStorage.setItem('ssol_admin_credentials', JSON.stringify({ ...creds, password: values.newPassword }));
-      message.success('密码已修改，下次登录请用新密码');
+      if (values.newPassword !== values.confirmPassword) {
+        message.error('两次密码不一致');
+        return;
+      }
+      if (!isSupabaseConfigured) {
+        message.error('Supabase 未配置');
+        return;
+      }
+      const { error } = await supabase.auth.updateUser({ password: values.newPassword });
+      if (error) {
+        message.error(error.message);
+        return;
+      }
+      message.success('密码已修改，所有设备下次登录需用新密码');
       setPwdModalOpen(false);
       pwdForm.resetFields();
     } catch { /* ignore */ }
@@ -496,9 +503,6 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
         cancelText="取消"
       >
         <Form form={pwdForm} layout="vertical" size="large" style={{ paddingTop: 8 }}>
-          <Form.Item name="oldPassword" label="原密码" rules={[{ required: true, message: '请输入原密码' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="请输入原密码" />
-          </Form.Item>
           <Form.Item name="newPassword" label="新密码" rules={[{ required: true, message: '请输入新密码' }]}>
             <Input.Password prefix={<LockOutlined />} placeholder="至少6位" />
           </Form.Item>

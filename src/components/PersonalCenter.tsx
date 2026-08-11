@@ -3,10 +3,11 @@ import { Card, Avatar, Tag, Button, Input, Form, Select, message, Divider, List,
 import {
   UserOutlined, EnvironmentOutlined, PhoneOutlined, MailOutlined,
   EditOutlined, HeartOutlined, StarOutlined, TagsOutlined,
-  ArrowLeftOutlined, SaveOutlined,
+  ArrowLeftOutlined, SaveOutlined, LockOutlined,
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
 import ResumeEditor from './ResumeEditor';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const { Option } = Select;
 const categories = ['疑难杂症', '稀有工种', '非遗手艺', '农业专家', '特殊技能', '翻译语言', '医生', '其它'];
@@ -20,9 +21,11 @@ interface PersonalCenterProps {
 }
 
 export default function PersonalCenter({ onBack, user, favorites, allDoctors, onUpdateUser }: PersonalCenterProps) {
-  const [tab, setTab] = useState<'card' | 'edit' | 'resume' | 'favorites' | 'keywords' | 'interactions'>('card');
+  const [tab, setTab] = useState<'card' | 'edit' | 'resume' | 'favorites' | 'keywords' | 'interactions' | 'security'>('card');
   const [form] = Form.useForm();
+  const [pwdForm] = Form.useForm();
   const [editing, setEditing] = useState(false);
+  const [pwdLoading, setPwdLoading] = useState(false);
 
   // 收藏的医生列表
   const favoritedDoctors = allDoctors.filter((d) => favorites.includes(d.id));
@@ -53,6 +56,7 @@ export default function PersonalCenter({ onBack, user, favorites, allDoctors, on
     { key: 'favorites', label: `收藏的好友 (${favoritedDoctors.length})`, icon: <HeartOutlined /> },
     { key: 'keywords', label: '我的关键词', icon: <TagsOutlined /> },
     { key: 'interactions', label: '互动记录', icon: <StarOutlined /> },
+    { key: 'security', label: '账号安全', icon: <LockOutlined /> },
   ];
 
   return (
@@ -243,6 +247,60 @@ export default function PersonalCenter({ onBack, user, favorites, allDoctors, on
               </Card>
             </div>
             <Empty description="互动记录功能开发中..." />
+          </Card>
+        )}
+
+        {/* 账号安全 */}
+        {tab === 'security' && (
+          <Card title="修改密码">
+            {!isSupabaseConfigured ? (
+              <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
+                <LockOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+                <p>Supabase 认证服务未配置，无法修改密码</p>
+              </div>
+            ) : (
+              <div style={{ maxWidth: 480 }}>
+                <p style={{ color: '#666', fontSize: 13, marginBottom: 24 }}>
+                  修改密码后，所有设备下次登录都需要使用新密码。
+                </p>
+                <Form form={pwdForm} layout="vertical" size="large">
+                  <Form.Item name="newPassword" label="新密码" rules={[{ required: true, message: '请输入新密码' }, { min: 6, message: '密码至少6位' }]}>
+                    <Input.Password prefix={<LockOutlined />} placeholder="请输入新密码（至少6位）" />
+                  </Form.Item>
+                  <Form.Item name="confirmPassword" label="确认新密码" rules={[{ required: true, message: '请再次输入新密码' }]}>
+                    <Input.Password prefix={<LockOutlined />} placeholder="再次输入新密码" />
+                  </Form.Item>
+                  <Button
+                    type="primary"
+                    icon={<SaveOutlined />}
+                    loading={pwdLoading}
+                    onClick={async () => {
+                      try {
+                        const values = await pwdForm.validateFields();
+                        if (values.newPassword !== values.confirmPassword) {
+                          message.error('两次密码不一致');
+                          return;
+                        }
+                        setPwdLoading(true);
+                        const { error } = await supabase.auth.updateUser({ password: values.newPassword });
+                        setPwdLoading(false);
+                        if (error) {
+                          message.error(error.message);
+                          return;
+                        }
+                        message.success('密码修改成功，下次登录请使用新密码');
+                        pwdForm.resetFields();
+                      } catch {
+                        setPwdLoading(false);
+                      }
+                    }}
+                    size="large"
+                  >
+                    确认修改
+                  </Button>
+                </Form>
+              </div>
+            )}
           </Card>
         )}
       </div>
