@@ -6,8 +6,8 @@ import Navbar from './components/Navbar';
 import MapContainer from './components/MapContainer';
 import ResultTable from './components/ResultTable';
 import UserProfile from './components/UserProfile';
-import RegisterPage from './components/RegisterPage';
 import AdminDashboard from './components/AdminDashboard';
+import AdminLogin from './components/AdminLogin';
 import PersonalCenter from './components/PersonalCenter';
 import UserManagement from './components/UserManagement';
 import { userAPI, visitorAPI } from './lib/cloudbase';
@@ -296,10 +296,12 @@ function App() {
     };
   }, []);
 
-  // 隐藏的管理后台入口：URL hash 或快捷键 Ctrl+Shift+A
+  // 管理后台入口：URL hash #/admin（需登录）或 #/admin-login（直接进入管理员登录页）
   useEffect(() => {
     const checkAdminHash = () => {
-      if (window.location.hash === '#/admin') {
+      if (window.location.hash === '#/admin-login') {
+        setCurrentPage('admin-login');
+      } else if (window.location.hash === '#/admin') {
         if (!isLoggedIn) {
           setAuthModalOpen(true);
         } else if (isAdminEmail(supabaseUser?.email)) {
@@ -390,43 +392,11 @@ function App() {
     });
   }, [isLoggedIn]);
 
-  const handleLogin = useCallback(() => {
-    setIsLoggedIn(true);
-    setLoginModalOpen(false);
-    // 如果还没有当前用户信息，创建一个默认用户
-    if (!currentUser) {
-      const defaultUser: Partial<Doctor> = {
-        id: `user-${Date.now()}`,
-        name: '我的昵称',
-        keywords: [],
-        likes: 0,
-        verified: false,
-      };
-      setCurrentUser(defaultUser);
-    }
-    if (favTarget) { setFavorites((prev) => [...prev, favTarget.id]); message.success(`已收藏 ${favTarget.name}`); setFavTarget(null); }
-  }, [favTarget, currentUser]);
-
-  // 导航栏登录按钮：Supabase配置时打开邮箱登录弹窗，否则直接登录
+  // 导航栏登录按钮：始终打开邮箱登录弹窗（强制邮箱认证）
   const handleNavLogin = useCallback(() => {
-    if (supabaseConfigured) {
-      setAuthInitialMode('login');
-      setAuthModalOpen(true);
-    } else {
-      setIsLoggedIn(true);
-      if (!currentUser) {
-        const defaultUser: Partial<Doctor> = {
-          id: `user-${Date.now()}`,
-          name: '我的昵称',
-          keywords: [],
-          likes: 0,
-          verified: false,
-        };
-        setCurrentUser(defaultUser);
-      }
-      message.success('登录成功');
-    }
-  }, [currentUser, supabaseConfigured]);
+    setAuthInitialMode('login');
+    setAuthModalOpen(true);
+  }, []);
 
   // 导航栏注册按钮：打开 Supabase 注册弹窗（注册标签页）
   const handleNavRegister = useCallback(() => {
@@ -532,35 +502,7 @@ function App() {
     return results;
   }, [searchKeyword, userLocation, experts]);
 
-  const handleRegister = useCallback(async (user: Partial<Doctor>) => {
-    const userData = {
-      ...user,
-      id: user.id || `user-${Date.now()}`,
-      verified: false,
-      createdAt: new Date().toISOString(),
-    };
-    try {
-      // 尝试云数据库
-      await userAPI.register(userData);
-      message.success('注册申请已提交，等待管理员审核');
-    } catch {
-      // 云数据库不可用，使用本地存储
-      console.log('云数据库不可用，使用本地存储');
-    }
-    // 无论云数据库是否成功，都保存到本地
-    setPendingUsers((prev) => {
-      if (prev.find((u) => u.id === userData.id)) return prev;
-      return [...prev, userData];
-    });
-    setRegisteredUsers((prev) => {
-      if (prev.find((u) => u.id === userData.id)) return prev;
-      return [...prev, userData];
-    });
-    // 注册成功后自动登录并跳转个人中心
-    setIsLoggedIn(true);
-    setCurrentUser(userData);
-    setCurrentPage('personal');
-  }, []);
+
 
   const handleApprove = useCallback(async (id: string) => {
     try { await userAPI.approveUser(id); } catch { /* 本地模式 */ }
@@ -708,21 +650,6 @@ function App() {
 
   return (
     <ConfigProvider locale={zhCN}>
-      {currentPage === 'register' && (
-        <>
-          <Navbar
-            onSearch={handleSearch} onLocationUpdate={handleLocationUpdate} onDistanceSelect={handleDistanceSelect}
-            onGoRegister={handleNavRegister} onGoLogin={handleNavLogin} onGoHome={() => setCurrentPage('home')}
-            onGoAdmin={handleGoAdmin}
-            onGoPersonal={() => setCurrentPage('personal')}
-            onGoUsers={() => setCurrentPage('users')}
-            onLogout={handleLogout}
-            ipLocation={ipLocation} isLoggedIn={isLoggedIn}
-            isAdmin={isAdminEmail(supabaseUser?.email)}
-          />
-          <RegisterPage onBack={() => setCurrentPage('home')} onRegister={handleRegister} onGoLogin={handleNavLogin} ipLocation={ipLocation} />
-        </>
-      )}
       {currentPage === 'personal' && currentUser && (
         <PersonalCenter
           onBack={() => setCurrentPage('home')}
@@ -760,6 +687,23 @@ function App() {
           />
           <AdminDashboard onBack={() => setCurrentPage('home')} pendingUsers={pendingUsers} registeredUsers={registeredUsers} onApprove={handleApprove} onReject={handleReject} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} />
         </>
+      )}
+      {currentPage === 'admin-login' && (
+        <AdminLogin
+          onBack={() => setCurrentPage('home')}
+          onLogin={(email) => {
+            if (email) addAdminEmail(email);
+            setIsAdminLoggedIn(true);
+            setCurrentUser((prev) => prev || {
+              id: `admin-user-${Date.now()}`,
+              name: '管理员',
+              keywords: [],
+              likes: 0,
+              verified: false,
+            });
+            setCurrentPage('admin');
+          }}
+        />
       )}
       {currentPage === 'home' && (
         <div className="app">
@@ -799,11 +743,11 @@ function App() {
           isFavorited={selectedDoctor ? favorites.includes(selectedDoctor.id) : false}
           onFavorite={() => selectedDoctor && handleFavorite(selectedDoctor)} isLoggedIn={isLoggedIn}
         />
-        <Modal title="收藏需要登录" open={loginModalOpen} onCancel={() => setLoginModalOpen(false)} onOk={() => { setLoginModalOpen(false); if (supabaseConfigured) setAuthModalOpen(true); else handleLogin(); }} okText="登录" cancelText="取消">
+        <Modal title="收藏需要登录" open={loginModalOpen} onCancel={() => setLoginModalOpen(false)} onOk={() => { setLoginModalOpen(false); setAuthModalOpen(true); }} okText="登录" cancelText="取消">
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <LoginOutlined style={{ fontSize: 48, color: '#1677ff', marginBottom: 16 }} />
             <p>收藏功能需要先注册/登录</p>
-            {supabaseConfigured ? <p style={{ color: '#999', fontSize: 12 }}>请使用邮箱注册或登录</p> : <p style={{ color: '#999', fontSize: 12 }}>（MVP演示：点击「登录」即可）</p>}
+            <p style={{ color: '#999', fontSize: 12 }}>请使用邮箱注册或登录</p>
           </div>
         </Modal>
         </div>
