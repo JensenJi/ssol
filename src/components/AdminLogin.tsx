@@ -55,7 +55,7 @@ export default function AdminLogin({ onBack, onLogin }: AdminLoginProps) {
   const [pwdSetupOpen, setPwdSetupOpen] = useState(false);
   const [pwdSetupForm] = Form.useForm();
 
-  const hasSupabase = isSupabaseConfigured;
+  const hasSupabase = isSupabaseConfigured();
   const hasAdminEmails = getAdminEmails().length > 0;
   const localAdmin = getLocalAdmin();
 

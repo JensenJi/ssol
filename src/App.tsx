@@ -758,7 +758,7 @@ function App() {
             isAdmin={true}
             showSlogan={false}
           />
-          <AdminDashboard onBack={() => setCurrentPage('home')} pendingUsers={pendingUsers} registeredUsers={registeredUsers} onApprove={handleApprove} onReject={handleReject} />
+          <AdminDashboard onBack={() => setCurrentPage('home')} pendingUsers={pendingUsers} registeredUsers={registeredUsers} onApprove={handleApprove} onReject={handleReject} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} />
         </>
       )}
       {currentPage === 'home' && (

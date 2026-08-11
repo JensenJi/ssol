@@ -4,7 +4,7 @@ import {
   DashboardOutlined, UserAddOutlined, UserOutlined, EyeOutlined,
   SafetyCertificateOutlined,
   CheckOutlined, CloseOutlined,
-  KeyOutlined, LockOutlined, EyeOutlined as EyeIcon,
+  KeyOutlined, LockOutlined,
   WarningOutlined, EditOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
@@ -18,6 +18,8 @@ interface AdminDashboardProps {
   registeredUsers: Partial<Doctor>[];
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  onUpdateUser: (user: Partial<Doctor>) => void;
+  onDeleteUser: (id: string) => void;
 }
 
 // 模拟访客统计数据
@@ -72,7 +74,7 @@ function checkPhotoViolation(photo: string): boolean {
   return photo.startsWith('http');
 }
 
-export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, onApprove, onReject }: AdminDashboardProps) {
+export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, onApprove, onReject, onUpdateUser, onDeleteUser }: AdminDashboardProps) {
   const [pwdModalOpen, setPwdModalOpen] = useState(false);
   const [pwdForm] = Form.useForm();
   const [detailUser, setDetailUser] = useState<Partial<Doctor> | null>(null);
@@ -122,7 +124,7 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
         message.error('两次密码不一致');
         return;
       }
-      if (!isSupabaseConfigured) {
+      if (!isSupabaseConfigured()) {
         message.error('Supabase 未配置');
         return;
       }
@@ -251,8 +253,7 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
       }
       message.success('用户信息已更新');
       setEditUser(null);
-      // 强制刷新页面数据
-      window.location.reload();
+      onUpdateUser(updated);
     } catch { /* ignore */ }
   };
 
@@ -269,7 +270,7 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
         localStorage.setItem('ssol_registeredUsers', JSON.stringify(reg));
         localStorage.setItem('ssol_pendingUsers', JSON.stringify(pend));
         message.success('用户已删除');
-        window.location.reload();
+        onDeleteUser(user.id);
       },
     });
   };
@@ -307,7 +308,7 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
       title: '操作', key: 'action', width: 220,
       render: (_: unknown, record: Partial<Doctor>) => (
         <Space>
-          <Button size="small" icon={<EyeIcon />} onClick={() => handleViewDetail(record)}>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)}>
             查看
           </Button>
           <Button type="primary" size="small" icon={<CheckOutlined />} onClick={() => record.id && onApprove(record.id)}>
@@ -514,7 +515,7 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
 
       {/* 用户详情审核弹窗 */}
       <Modal
-        title={<span><EyeIcon style={{ color: '#1677ff', marginRight: 8 }} />注册信息审核</span>}
+        title={<span><EyeOutlined style={{ color: '#1677ff', marginRight: 8 }} />注册信息审核</span>}
         open={!!detailUser}
         onCancel={() => setDetailUser(null)}
         width={600}
