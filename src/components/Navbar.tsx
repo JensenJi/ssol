@@ -93,7 +93,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
           ) : (
             <>
               <Button type="text" onClick={() => { setAuthModalOpen(false); onGoRegister?.(); }} className="nav-btn-sm nav-btn-register">注册</Button>
-              <Button type="text" onClick={() => setAuthModalOpen(true)} className="nav-btn-sm nav-btn-login">登录</Button>
+              <Button type="text" onClick={onGoLogin} className="nav-btn-sm nav-btn-login">登录</Button>
             </>
           )}
         </div>

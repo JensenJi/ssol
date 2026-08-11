@@ -663,11 +663,6 @@ function App() {
             {supabaseConfigured ? <p style={{ color: '#999', fontSize: 12 }}>请使用邮箱注册或登录</p> : <p style={{ color: '#999', fontSize: 12 }}>（MVP演示：点击「登录」即可）</p>}
           </div>
         </Modal>
-        <div className="footer">
-          <div className="footer-left">搜索在线 ssol.cn</div>
-          <div className="footer-center">© 2026 搜索在线 版权所有</div>
-          <div className="footer-right">联系邮箱：contact@ssol.cn</div>
-        </div>
         </div>
       )}
 
