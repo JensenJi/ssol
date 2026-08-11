@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ConfigProvider, message, Modal, Button } from 'antd';
-import { LoginOutlined, TableOutlined } from '@ant-design/icons';
+import { LoginOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
 import Navbar from './components/Navbar';
 import MapContainer from './components/MapContainer';
@@ -51,11 +51,9 @@ function App() {
   const [deviceInfo] = useState(detectDeviceInfo);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authInitialMode, setAuthInitialMode] = useState<'login' | 'register'>('login');
-  const [adminSetupOpen, setAdminSetupOpen] = useState(false);
-  const needAdminSetupRef = useRef(false);
 
-  // Supabase 认证
-  const { user: supabaseUser, configured: supabaseConfigured, signUp, signIn, signOut, resetPassword } = useSupabaseAuth();
+  // Supabase 认证（只需要 signOut，AuthModal 内部自行处理 signUp/signIn/resetPassword）
+  const { user: supabaseUser, configured: supabaseConfigured, signOut } = useSupabaseAuth();
 
   // Supabase 登录成功后同步状态
   useEffect(() => {
@@ -72,7 +70,8 @@ function App() {
       }
     }
   }, [supabaseUser]);
-  const [currentPage, setCurrentPage] = useState<'home' | 'register' | 'admin' | 'personal' | 'users'>('home');
+
+  const [currentPage, setCurrentPage] = useState<'home' | 'admin' | 'personal' | 'users' | 'admin-login'>('home');
   const [currentUser, setCurrentUser] = useState<Partial<Doctor> | null>(() => {
     const saved = localStorage.getItem('ssol_currentUser');
     return saved ? JSON.parse(saved) : null;
@@ -91,7 +90,7 @@ function App() {
   const [ipLocation, setIpLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const dragRef = useRef<{ startY: number; startHeight: number; wasExpanded: boolean } | null>(null);
 
-  // 检查是否为管理员
+  // ==================== 管理员工具函数 ====================
   function isAdminEmail(email?: string): boolean {
     if (!email) return false;
     try {
@@ -121,23 +120,15 @@ function App() {
     }
   }
 
-  // 登录状态持久化
-  useEffect(() => {
-    localStorage.setItem('ssol_loggedIn', String(isLoggedIn));
-  }, [isLoggedIn]);
-  useEffect(() => {
-    localStorage.setItem('ssol_adminLoggedIn', String(isAdminLoggedIn));
-  }, [isAdminLoggedIn]);
+  // ==================== 持久化 ====================
+  useEffect(() => { localStorage.setItem('ssol_loggedIn', String(isLoggedIn)); }, [isLoggedIn]);
+  useEffect(() => { localStorage.setItem('ssol_adminLoggedIn', String(isAdminLoggedIn)); }, [isAdminLoggedIn]);
   useEffect(() => {
     if (currentUser) localStorage.setItem('ssol_currentUser', JSON.stringify(currentUser));
     else localStorage.removeItem('ssol_currentUser');
   }, [currentUser]);
-  useEffect(() => {
-    localStorage.setItem('ssol_pendingUsers', JSON.stringify(pendingUsers));
-  }, [pendingUsers]);
-  useEffect(() => {
-    localStorage.setItem('ssol_registeredUsers', JSON.stringify(registeredUsers));
-  }, [registeredUsers]);
+  useEffect(() => { localStorage.setItem('ssol_pendingUsers', JSON.stringify(pendingUsers)); }, [pendingUsers]);
+  useEffect(() => { localStorage.setItem('ssol_registeredUsers', JSON.stringify(registeredUsers)); }, [registeredUsers]);
 
   // 从云开发加载认证专家数据 + 初始化测试用户
   useEffect(() => {
@@ -147,12 +138,9 @@ function App() {
         if (verifiedExperts && verifiedExperts.length > 0) {
           setExperts(verifiedExperts as Doctor[]);
         }
-        // 加载待审核用户
         const pending = await userAPI.getPendingUsers();
-        if (pending) {
-          setPendingUsers(pending as Partial<Doctor>[]);
-        }
-      } catch (error) {
+        if (pending) setPendingUsers(pending as Partial<Doctor>[]);
+      } catch {
         console.log('使用本地模拟数据');
       }
     };
@@ -182,20 +170,13 @@ function App() {
       setExperts((prev) => [...prev, { ...testUser, location_lat: 39.9, location_lng: 116.4, visible_range: 99999 } as unknown as Doctor]);
     }
 
-    // 记录访客
-    visitorAPI.recordVisit({
-      ...deviceInfo,
-      url: window.location.href,
-    }).catch(() => {});
+    visitorAPI.recordVisit({ ...deviceInfo, url: window.location.href }).catch(() => {});
   }, []);
 
   // 尝试获取用户位置：浏览器GPS优先，备选IP定位
   useEffect(() => {
     let geoWatchId: number | null = null;
-
-    // 方案1：浏览器 watchPosition（最精准，GPS可达5米内）
     if (navigator.geolocation) {
-      // 先用 getCurrentPosition 快速拿一个结果
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const lat = pos.coords.latitude;
@@ -203,51 +184,33 @@ function App() {
           setUserLocation({ lat, lng });
           reverseGeocode(lat, lng);
         },
-        () => { /* GPS失败，走IP */ getIPLocation(); },
+        () => { getIPLocation(); },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
-
-      // 同时用 watchPosition 持续优化精度（30秒后自动停止）
       geoWatchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          setUserLocation({ lat, lng });
-          reverseGeocode(lat, lng);
-        },
-        () => { /* ignore watch errors */ },
+        (pos) => reverseGeocode(pos.coords.latitude, pos.coords.longitude),
+        () => {},
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
-      setTimeout(() => {
-        if (geoWatchId !== null) navigator.geolocation.clearWatch(geoWatchId);
-      }, 30000);
+      setTimeout(() => { if (geoWatchId !== null) navigator.geolocation.clearWatch(geoWatchId); }, 30000);
     } else {
       getIPLocation();
     }
 
-    // 反向地理编码：坐标→地名
     function reverseGeocode(lat: number, lng: number) {
       fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=zh&zoom=12`)
         .then((r) => r.json())
         .then((d) => {
           const addr = d.address || {};
           const name = [addr.state, addr.city || addr.town || addr.county, addr.suburb || addr.district].filter(Boolean).join(' ');
-          if (name) {
-            setIpLocation({ name, lat, lng });
-            setLocationName(name);
-          }
+          if (name) { setIpLocation({ name, lat, lng }); setLocationName(name); }
         })
-        .catch(() => {
-          setLocationName(`${lat.toFixed(2)}, ${lng.toFixed(2)}`);
-        });
+        .catch(() => { setLocationName(`${lat.toFixed(2)}, ${lng.toFixed(2)}`); });
     }
 
-    // 方案2：IP定位（多API降级，精确到城市级）
     function getIPLocation() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-      // 1) ip-api.com（免费，无需key，中国城市级准确）
       fetch('http://ip-api.com/json/?lang=zh-CN', { signal: controller.signal })
         .then((res) => res.json())
         .then((data) => {
@@ -268,35 +231,20 @@ function App() {
             setIpLocation({ name: name || '未知', lat: data.latitude, lng: data.longitude });
             setUserLocation({ lat: data.latitude, lng: data.longitude });
             setLocationName(name || '未知');
-            return;
-          }
-          return fetch('https://api.ip.sb/geoip', { signal: controller.signal });
-        })
-        .then((res) => { if (!res) return; return res.json(); })
-        .then((data) => {
-          if (data && data.latitude && data.longitude) {
-            const name = [data.region, data.city].filter(Boolean).join(' ');
-            setIpLocation({ name: name || '未知', lat: data.latitude, lng: data.longitude });
-            setUserLocation({ lat: data.latitude, lng: data.longitude });
-            setLocationName(name || '未知');
           }
         })
         .catch(() => {
           clearTimeout(timeoutId);
-          console.log('IP定位全部失败');
-          // 全部失败时默认设为山东济宁（汶上县所属地级市）
           setIpLocation({ name: '山东 济宁', lat: 35.41, lng: 116.52 });
           setUserLocation({ lat: 35.41, lng: 116.52 });
           setLocationName('山东 济宁');
         });
     }
 
-    return () => {
-      if (geoWatchId !== null) navigator.geolocation.clearWatch(geoWatchId);
-    };
+    return () => { if (geoWatchId !== null) navigator.geolocation.clearWatch(geoWatchId); };
   }, []);
 
-  // 管理后台入口：URL hash #/admin（需登录）或 #/admin-login（直接进入管理员登录页）
+  // ==================== 管理后台入口 ====================
   useEffect(() => {
     const checkAdminHash = () => {
       if (window.location.hash === '#/admin-login') {
@@ -308,7 +256,15 @@ function App() {
           setIsAdminLoggedIn(true);
           setCurrentPage('admin');
         } else {
-          setAdminSetupOpen(true);
+          // 已登录但非管理员：尝试设为管理员
+          if (getAdminEmails().length === 0 && supabaseUser?.email) {
+            addAdminEmail(supabaseUser.email);
+            setIsAdminLoggedIn(true);
+            setCurrentPage('admin');
+            message.success('您已成为首位管理员');
+          } else {
+            message.warning('您没有管理员权限');
+          }
         }
       }
     };
@@ -323,7 +279,14 @@ function App() {
           setIsAdminLoggedIn(true);
           setCurrentPage('admin');
         } else {
-          setAdminSetupOpen(true);
+          if (getAdminEmails().length === 0 && supabaseUser?.email) {
+            addAdminEmail(supabaseUser.email);
+            setIsAdminLoggedIn(true);
+            setCurrentPage('admin');
+            message.success('您已成为首位管理员');
+          } else {
+            message.warning('您没有管理员权限');
+          }
         }
       }
     };
@@ -334,24 +297,18 @@ function App() {
     };
   }, [isLoggedIn, supabaseUser]);
 
+  // ==================== 搜索和交互 ====================
   const handleSearch = useCallback((keyword: string) => setSearchKeyword(keyword.trim()), []);
-
-  const handleMapClick = useCallback((lat: number, lng: number) => {
-    setUserLocation({ lat, lng });
-  }, []);
+  const handleMapClick = useCallback((lat: number, lng: number) => setUserLocation({ lat, lng }), []);
 
   const handleLocationUpdate = useCallback((loc: { lat: number; lng: number; name: string }) => {
     setLocationName(loc.name);
-    // 如果有有效坐标（非0非-1），直接使用
     if (loc.lat > 0 && loc.lng > 0) {
       setUserLocation({ lat: loc.lat, lng: loc.lng });
-      // 同步更新 ipLocation，让搜索弹窗显示纠正后的位置
       setIpLocation({ name: loc.name, lat: loc.lat, lng: loc.lng });
     } else if (loc.name) {
-      // 手动位置：通过Nominatim地理编码获取坐标（带超时保护）
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
-      
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
       fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(loc.name)}&format=json&limit=1&accept-language=zh`, { signal: controller.signal })
         .then((r) => r.json())
         .then((data) => {
@@ -361,27 +318,19 @@ function App() {
             const newLng = parseFloat(data[0].lon);
             if (!isNaN(newLat) && !isNaN(newLng)) {
               setUserLocation({ lat: newLat, lng: newLng });
-              // 同步更新 ipLocation，让搜索弹窗显示纠正后的位置
               setIpLocation({ name: loc.name, lat: newLat, lng: newLng });
             }
           }
         })
         .catch(() => {
           clearTimeout(timeoutId);
-          // 地理编码失败，仍然显示用户纠正的位置名称
           setIpLocation({ name: loc.name, lat: 0, lng: 0 });
-          console.log('地理编码失败，使用位置名称:', loc.name);
         });
     }
   }, []);
 
-  const handleLocationName = useCallback((name: string) => {
-    setLocationName(name);
-  }, []);
-
-  const handleDistanceSelect = useCallback((_distance: number) => {
-    // 距离筛选通过搜索对话框传递，这里保留接口
-  }, []);
+  const handleLocationName = useCallback((name: string) => setLocationName(name), []);
+  const handleDistanceSelect = useCallback(() => {}, []);
 
   const handleFavorite = useCallback((doctor: Doctor) => {
     if (!isLoggedIn) { setFavTarget(doctor); setLoginModalOpen(true); return; }
@@ -392,99 +341,186 @@ function App() {
     });
   }, [isLoggedIn]);
 
-  // 导航栏登录按钮：始终打开邮箱登录弹窗（强制邮箱认证）
+  // ==================== 认证相关回调 ====================
+  // 导航栏登录按钮
   const handleNavLogin = useCallback(() => {
     setAuthInitialMode('login');
     setAuthModalOpen(true);
   }, []);
 
-  // 导航栏注册按钮：打开 Supabase 注册弹窗（注册标签页）
+  // 导航栏注册按钮
   const handleNavRegister = useCallback(() => {
     setAuthInitialMode('register');
     setAuthModalOpen(true);
   }, []);
 
-  // Supabase 登录/注册成功回调
-  const handleAuthSuccess = useCallback((email?: string, isRegister?: boolean) => {
+  // 登录成功回调（AuthModal 中登录成功后触发）
+  const handleLoginSuccess = useCallback((email: string) => {
     setAuthModalOpen(false);
     setIsLoggedIn(true);
 
-    // 注册时：创建本地用户记录，供管理员在后台查看和审核
-    if (isRegister && email) {
-      const newUserId = `user-${Date.now()}`;
-      const newUser = {
-        id: newUserId,
-        name: email.split('@')[0],
-        keywords: [],
-        likes: 0,
-        verified: false,
-        createdAt: new Date().toISOString(),
-      } as Partial<Doctor>;
-      (newUser as any).email = email;
-      setPendingUsers((prev) => prev.find((u) => u.id === newUserId) ? prev : [...prev, newUser]);
-      setRegisteredUsers((prev) => prev.find((u) => u.id === newUserId) ? prev : [...prev, newUser]);
-      setCurrentUser(newUser);
+    // 注册到本地用户记录（用于管理员后台查看）
+    if (email) {
+      const existingUser = registeredUsers.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+      if (!existingUser) {
+        const newUserId = `user-${Date.now()}`;
+        const newUser: Partial<Doctor> & { email?: string } = {
+          id: newUserId,
+          name: email.split('@')[0],
+          keywords: [],
+          likes: 0,
+          verified: false,
+          createdAt: new Date().toISOString(),
+          email,
+        };
+        setRegisteredUsers((prev) => [...prev, newUser]);
+        setCurrentUser(newUser);
+      } else {
+        setCurrentUser(existingUser);
+      }
     }
 
-    // 管理员自动识别与首次提升
+    // 管理员判断：首位自动提升
     if (email) {
       const adminEmails = getAdminEmails();
       if (adminEmails.length === 0) {
-        // 首次设置：无管理员时自动提升当前用户
         addAdminEmail(email);
         setIsAdminLoggedIn(true);
         setCurrentPage('admin');
-        needAdminSetupRef.current = false;
         message.success('您已成为首位管理员，进入管理后台');
         return;
       }
       if (isAdminEmail(email)) {
         setIsAdminLoggedIn(true);
         setCurrentPage('admin');
-        needAdminSetupRef.current = false;
-        return;
-      }
-      if (needAdminSetupRef.current) {
-        addAdminEmail(email);
-        setIsAdminLoggedIn(true);
-        setCurrentPage('admin');
-        needAdminSetupRef.current = false;
-        message.success('管理员身份已设置，进入管理后台');
         return;
       }
     }
 
-    // 普通用户：进入个人中心
+    // 普通用户：进入个人中心，处理收藏
     setCurrentPage('personal');
     if (favTarget) { setFavorites((prev) => [...prev, favTarget.id]); message.success(`已收藏 ${favTarget.name}`); setFavTarget(null); }
-  }, [favTarget]);
+  }, [favTarget, registeredUsers]);
 
-  // 设置为管理员（通过统一登录后自动触发）
-  const handleAdminSetup = useCallback(async () => {
-    setAdminSetupOpen(false);
-    if (supabaseUser?.email) {
-      // Supabase 已登录，直接设置
-      addAdminEmail(supabaseUser.email);
-      setIsAdminLoggedIn(true);
-      setCurrentPage('admin');
-      message.success('管理员身份已设置，进入管理后台');
+  // 管理后台登录页成功回调
+  const handleAdminLoginSuccess = useCallback((email: string) => {
+    setIsLoggedIn(true);
+    setIsAdminLoggedIn(true);
+    addAdminEmail(email);
+    
+    // 注册到本地用户记录
+    const existingUser = registeredUsers.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+    if (!existingUser) {
+      const newUser: Partial<Doctor> & { email?: string } = {
+        id: `admin-${Date.now()}`,
+        name: email.split('@')[0],
+        keywords: [],
+        likes: 0,
+        verified: false,
+        createdAt: new Date().toISOString(),
+        email,
+      };
+      setRegisteredUsers((prev) => [...prev, newUser]);
+      setCurrentUser(newUser);
     } else {
-      // Supabase 未登录，先打开登录弹窗，登录后自动完成设置
-      needAdminSetupRef.current = true;
+      setCurrentUser(existingUser);
+    }
+    
+    setCurrentPage('admin');
+    message.success('登录成功，进入管理后台');
+  }, [registeredUsers]);
+
+  // ==================== 管理员操作 ====================
+  const handleApprove = useCallback(async (id: string) => {
+    try { await userAPI.approveUser(id); } catch { /* 本地模式 */ }
+    message.success('已通过审核');
+    setPendingUsers((prev) => prev.filter((u) => u.id !== id));
+    setRegisteredUsers((prev) => prev.map((u) => u.id === id ? { ...u, verified: true } : u));
+    const approved = registeredUsers.find((u) => u.id === id);
+    if (approved) {
+      setExperts((prev) => {
+        if (prev.find((e) => e.id === id)) return prev;
+        return [...prev, { ...approved, location_lat: 39.9, location_lng: 116.4 } as Doctor];
+      });
+    }
+  }, [registeredUsers]);
+
+  const handleReject = useCallback(async (id: string) => {
+    try { await userAPI.rejectUser(id); } catch { /* 本地模式 */ }
+    message.info('已拒绝申请');
+    setPendingUsers((prev) => prev.filter((u) => u.id !== id));
+  }, []);
+
+  const handleUpdateUser = useCallback((updatedUser: Partial<Doctor>) => {
+    setRegisteredUsers((prev) => prev.map((u) => u.id === updatedUser.id ? updatedUser : u));
+    setPendingUsers((prev) => prev.map((u) => u.id === updatedUser.id ? updatedUser : u));
+  }, []);
+
+  const handleDeleteUser = useCallback((id: string) => {
+    setRegisteredUsers((prev) => prev.filter((u) => u.id !== id));
+    setPendingUsers((prev) => prev.filter((u) => u.id !== id));
+  }, []);
+
+  // 导航栏"管理后台"按钮
+  const handleGoAdmin = useCallback(() => {
+    if (isAdminLoggedIn) {
+      setCurrentPage('admin');
+    } else if (isLoggedIn) {
+      if (isAdminEmail(supabaseUser?.email)) {
+        setIsAdminLoggedIn(true);
+        setCurrentPage('admin');
+      } else {
+        const adminEmails = getAdminEmails();
+        if (adminEmails.length === 0 && supabaseUser?.email) {
+          addAdminEmail(supabaseUser.email);
+          setIsAdminLoggedIn(true);
+          setCurrentPage('admin');
+          message.success('您已成为首位管理员');
+        } else {
+          message.warning('您没有管理员权限');
+        }
+      }
+    } else {
+      setAuthInitialMode('login');
       setAuthModalOpen(true);
     }
-  }, [supabaseUser]);
+  }, [isAdminLoggedIn, isLoggedIn, supabaseUser]);
 
+  // 退出登录
+  const handleLogout = useCallback(() => {
+    setIsLoggedIn(false);
+    setIsAdminLoggedIn(false);
+    setCurrentUser(null);
+    setCurrentPage('home');
+    localStorage.removeItem('ssol_loggedIn');
+    localStorage.removeItem('ssol_currentUser');
+    localStorage.removeItem('ssol_adminLoggedIn');
+    if (supabaseConfigured) signOut();
+    message.success('已退出登录');
+  }, [supabaseConfigured, signOut]);
+
+  const handleAdminLogout = useCallback(() => {
+    setIsAdminLoggedIn(false);
+    setCurrentPage('home');
+    localStorage.removeItem('ssol_adminLoggedIn');
+    message.success('已退出管理后台');
+  }, []);
+
+  const handleMarkerClick = useCallback((doctor: Doctor) => { setSelectedDoctor(doctor); setProfileOpen(true); }, []);
+  const handleKeywordClick = useCallback((keyword: string) => {
+    setProfileOpen(false);
+    setSelectedDoctor(null);
+    setSearchKeyword(keyword);
+    setTableExpanded(true);
+  }, []);
+
+  // ==================== 数据处理 ====================
   const allKeywords = useMemo(() => {
     const freqMap = new Map<string, number>();
     experts.forEach((d) => d.keywords.forEach((k) => freqMap.set(k, (freqMap.get(k) || 0) + 1)));
-    // 按频率降序排序
-    return Array.from(freqMap.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([kw]) => kw);
+    return Array.from(freqMap.entries()).sort((a, b) => b[1] - a[1]).map(([kw]) => kw);
   }, [experts]);
 
-  // 搜索结果：先匹配关键词，再按距离排序
   const filteredDoctors = useMemo(() => {
     let results = experts;
     const center = userLocation || { lat: 39.9042, lng: 116.4074 };
@@ -502,107 +538,7 @@ function App() {
     return results;
   }, [searchKeyword, userLocation, experts]);
 
-
-
-  const handleApprove = useCallback(async (id: string) => {
-    try { await userAPI.approveUser(id); } catch { /* 本地模式 */ }
-    message.success('已通过审核');
-    setPendingUsers((prev) => prev.filter((u) => u.id !== id));
-    setRegisteredUsers((prev) => prev.map((u) => u.id === id ? { ...u, verified: true } : u));
-    // 将已通过的用户加入专家列表
-    const approved = registeredUsers.find((u) => u.id === id);
-    if (approved) {
-      setExperts((prev) => {
-        if (prev.find((e) => e.id === id)) return prev;
-        return [...prev, { ...approved, location_lat: 39.9, location_lng: 116.4 } as Doctor];
-      });
-    }
-  }, [registeredUsers]);
-
-  const handleReject = useCallback(async (id: string) => {
-    try { await userAPI.rejectUser(id); } catch { /* 本地模式 */ }
-    message.info('已拒绝申请');
-    setPendingUsers((prev) => prev.filter((u) => u.id !== id));
-  }, []);
-
-  // 用户管理：更新用户信息
-  const handleUpdateUser = useCallback((updatedUser: Partial<Doctor>) => {
-    setRegisteredUsers((prev) => prev.map((u) => u.id === updatedUser.id ? updatedUser : u));
-    setPendingUsers((prev) => prev.map((u) => u.id === updatedUser.id ? updatedUser : u));
-  }, []);
-
-  // 用户管理：删除用户
-  const handleDeleteUser = useCallback((id: string) => {
-    setRegisteredUsers((prev) => prev.filter((u) => u.id !== id));
-    setPendingUsers((prev) => prev.filter((u) => u.id !== id));
-  }, []);
-
-  const handleLogout = useCallback(() => {
-    setIsLoggedIn(false);
-    setIsAdminLoggedIn(false);
-    setCurrentUser(null);
-    setCurrentPage('home');
-    localStorage.removeItem('ssol_loggedIn');
-    localStorage.removeItem('ssol_currentUser');
-    localStorage.removeItem('ssol_adminLoggedIn');
-    if (supabaseConfigured) signOut();
-    message.success('已退出登录');
-  }, [supabaseConfigured, signOut]);
-
-  const handleAdminLogin = useCallback((email?: string) => {
-    setIsAdminLoggedIn(true);
-    // 确保 currentUser 存在
-    setCurrentUser((prev) => prev || {
-      id: `admin-user-${Date.now()}`,
-      name: '管理员',
-      keywords: [],
-      likes: 0,
-      verified: false,
-    });
-    setCurrentPage('admin');
-  }, []);
-
-  // 导航栏点击"管理后台"
-  const handleGoAdmin = useCallback(() => {
-    if (isAdminLoggedIn) {
-      setCurrentPage('admin');
-    } else if (isLoggedIn) {
-      // 已登录但非管理员：检查是否为首次设置
-      const adminEmails = getAdminEmails();
-      if (adminEmails.length === 0) {
-        // 无管理员，自动提升当前用户
-        if (supabaseUser?.email) {
-          addAdminEmail(supabaseUser.email);
-          setIsAdminLoggedIn(true);
-          setCurrentPage('admin');
-          message.success('您已成为首位管理员，进入管理后台');
-        } else {
-          setAdminSetupOpen(true);
-        }
-      } else {
-        setAdminSetupOpen(true);
-      }
-    } else {
-      setAuthModalOpen(true);
-    }
-  }, [isAdminLoggedIn, isLoggedIn, supabaseUser]);
-
-  const handleAdminLogout = useCallback(() => {
-    setIsAdminLoggedIn(false);
-    setCurrentPage('home');
-    localStorage.removeItem('ssol_adminLoggedIn');
-    message.success('已退出管理后台');
-  }, []);
-
-  const handleMarkerClick = useCallback((doctor: Doctor) => { setSelectedDoctor(doctor); setProfileOpen(true); }, []);
-  const handleKeywordClick = useCallback((keyword: string) => {
-    setProfileOpen(false);
-    setSelectedDoctor(null);
-    setSearchKeyword(keyword);
-    setTableExpanded(true);
-  }, []);
-
-  // 表格拖拽调整高度：支持鼠标和触摸（手机）
+  // 表格拖拽调整高度
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -621,10 +557,7 @@ function App() {
     };
 
     if (isTouch) {
-      const onTouchMove = (ev: TouchEvent) => {
-        ev.preventDefault();
-        handleMove(ev.touches[0].clientY);
-      };
+      const onTouchMove = (ev: TouchEvent) => { ev.preventDefault(); handleMove(ev.touches[0].clientY); };
       const onTouchEnd = () => {
         dragRef.current = null;
         document.removeEventListener('touchmove', onTouchMove);
@@ -648,8 +581,10 @@ function App() {
     }
   }, [tableHeight, tableExpanded]);
 
+  // ==================== 渲染 ====================
   return (
     <ConfigProvider locale={zhCN}>
+      {/* 个人中心 */}
       {currentPage === 'personal' && currentUser && (
         <PersonalCenter
           onBack={() => setCurrentPage('home')}
@@ -659,6 +594,8 @@ function App() {
           onUpdateUser={setCurrentUser}
         />
       )}
+
+      {/* 用户管理 */}
       {currentPage === 'users' && (
         <UserManagement
           onBack={() => setCurrentPage('home')}
@@ -671,6 +608,8 @@ function App() {
           onDeleteUser={handleDeleteUser}
         />
       )}
+
+      {/* 管理后台 */}
       {currentPage === 'admin' && isAdminLoggedIn && (
         <>
           <Navbar
@@ -685,26 +624,27 @@ function App() {
             isAdmin={true}
             showSlogan={false}
           />
-          <AdminDashboard onBack={() => setCurrentPage('home')} pendingUsers={pendingUsers} registeredUsers={registeredUsers} onApprove={handleApprove} onReject={handleReject} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} />
+          <AdminDashboard
+            onBack={() => setCurrentPage('home')}
+            pendingUsers={pendingUsers}
+            registeredUsers={registeredUsers}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onUpdateUser={handleUpdateUser}
+            onDeleteUser={handleDeleteUser}
+          />
         </>
       )}
+
+      {/* 管理员登录页 */}
       {currentPage === 'admin-login' && (
         <AdminLogin
           onBack={() => setCurrentPage('home')}
-          onLogin={(email) => {
-            if (email) addAdminEmail(email);
-            setIsAdminLoggedIn(true);
-            setCurrentUser((prev) => prev || {
-              id: `admin-user-${Date.now()}`,
-              name: '管理员',
-              keywords: [],
-              likes: 0,
-              verified: false,
-            });
-            setCurrentPage('admin');
-          }}
+          onLoginSuccess={handleAdminLoginSuccess}
         />
       )}
+
+      {/* 首页 */}
       {currentPage === 'home' && (
         <div className="app">
           <Navbar
@@ -718,65 +658,48 @@ function App() {
             ipLocation={ipLocation} isLoggedIn={isLoggedIn}
             isAdmin={isAdminEmail(supabaseUser?.email)}
           />
-        <div className="main-content">
-          <div className="content-left full-width">
-            <MapContainer
-              doctors={filteredDoctors} selectedDoctor={selectedDoctor} userLocation={userLocation}
-              locationName={locationName}
-              onMapClick={handleMapClick} onMarkerClick={handleMarkerClick} onLocationName={handleLocationName}
-            />
-          </div>
-          {/* 结果列表 */}
-          <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={{ height: tableExpanded ? tableHeight : 40 }}>
-            <div className="drag-handle" onMouseDown={handleDragStart} onTouchStart={handleDragStart} title="拖动调整列表高度">
-              <span style={{ fontSize: 11, color: '#999', userSelect: 'none' }}>{tableExpanded ? '▼ 收起列表' : '▲ 展开列表'}</span>
+          <div className="main-content">
+            <div className="content-left full-width">
+              <MapContainer
+                doctors={filteredDoctors} selectedDoctor={selectedDoctor} userLocation={userLocation}
+                locationName={locationName}
+                onMapClick={handleMapClick} onMarkerClick={handleMarkerClick} onLocationName={handleLocationName}
+              />
             </div>
-            {tableExpanded && (
-              <div className="result-table-content">
-                <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
+            <div className={`result-table ${tableExpanded ? 'expanded' : 'collapsed'}`} style={{ height: tableExpanded ? tableHeight : 40 }}>
+              <div className="drag-handle" onMouseDown={handleDragStart} onTouchStart={handleDragStart} title="拖动调整列表高度">
+                <span style={{ fontSize: 11, color: '#999', userSelect: 'none' }}>{tableExpanded ? '▼ 收起列表' : '▲ 展开列表'}</span>
               </div>
-            )}
+              {tableExpanded && (
+                <div className="result-table-content">
+                  <ResultTable doctors={filteredDoctors} onRowClick={handleMarkerClick} favorites={favorites} onFavorite={handleFavorite} />
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-        <UserProfile
-          user={selectedDoctor} open={profileOpen} onClose={() => setProfileOpen(false)}
-          isFavorited={selectedDoctor ? favorites.includes(selectedDoctor.id) : false}
-          onFavorite={() => selectedDoctor && handleFavorite(selectedDoctor)} isLoggedIn={isLoggedIn}
-        />
-        <Modal title="收藏需要登录" open={loginModalOpen} onCancel={() => setLoginModalOpen(false)} onOk={() => { setLoginModalOpen(false); setAuthModalOpen(true); }} okText="登录" cancelText="取消">
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <LoginOutlined style={{ fontSize: 48, color: '#1677ff', marginBottom: 16 }} />
-            <p>收藏功能需要先注册/登录</p>
-            <p style={{ color: '#999', fontSize: 12 }}>请使用邮箱注册或登录</p>
-          </div>
-        </Modal>
+          <UserProfile
+            user={selectedDoctor} open={profileOpen} onClose={() => setProfileOpen(false)}
+            isFavorited={selectedDoctor ? favorites.includes(selectedDoctor.id) : false}
+            onFavorite={() => selectedDoctor && handleFavorite(selectedDoctor)} isLoggedIn={isLoggedIn}
+          />
+          {/* 收藏需要登录提示 */}
+          <Modal title="收藏需要登录" open={loginModalOpen} onCancel={() => setLoginModalOpen(false)} onOk={() => { setLoginModalOpen(false); setAuthModalOpen(true); }} okText="登录" cancelText="取消">
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <LoginOutlined style={{ fontSize: 48, color: '#1677ff', marginBottom: 16 }} />
+              <p>收藏功能需要先注册/登录</p>
+              <p style={{ color: '#999', fontSize: 12 }}>请使用邮箱注册或登录</p>
+            </div>
+          </Modal>
         </div>
       )}
 
-      {/* Supabase 统一登录弹窗 */}
+      {/* 统一认证弹窗（首页可访问） */}
       <AuthModal
         open={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
-        onLogin={signIn}
-        onRegister={signUp}
-        onResetPassword={resetPassword}
-        onSuccess={handleAuthSuccess}
+        onLoginSuccess={handleLoginSuccess}
         initialMode={authInitialMode}
       />
-      {/* 管理员身份设置弹窗 */}
-      <Modal
-        title="设置为管理员"
-        open={adminSetupOpen}
-        onCancel={() => setAdminSetupOpen(false)}
-        onOk={handleAdminSetup}
-        okText="确认设置"
-        cancelText="取消"
-      >
-        <div style={{ padding: '16px 0' }}>
-          <p>您的账号 <strong>{supabaseUser?.email}</strong> 尚未设置为管理员。</p>
-          <p style={{ color: '#666' }}>点击"确认设置"后，该账号将获得管理员权限，可以管理网站后台。</p>
-        </div>
-      </Modal>
     </ConfigProvider>
   );
 }

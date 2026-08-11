@@ -1,106 +1,160 @@
-import { useState, useEffect } from 'react';
-import { Modal, Input, Button, message, Tabs, Form } from 'antd';
-import { MailOutlined, LockOutlined, UserOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { useState } from 'react';
+import { Modal, Form, Input, Button, Tabs, message } from 'antd';
+import { MailOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
+import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
 
 interface AuthModalProps {
   open: boolean;
   onClose: () => void;
-  onLogin: (email: string, password: string) => Promise<{ error: any }>;
-  onRegister: (email: string, password: string, displayName: string) => Promise<{ error: any }>;
-  onResetPassword: (email: string) => Promise<{ error: any }>;
-  onSuccess: (email?: string, isRegister?: boolean) => void;
+  onLoginSuccess: (email: string) => void;
   initialMode?: 'login' | 'register';
 }
 
-export default function AuthModal({ open, onClose, onLogin, onRegister, onResetPassword, onSuccess, initialMode = 'login' }: AuthModalProps) {
-  const [mode, setMode] = useState<'login' | 'register' | 'reset'>(initialMode);
+export default function AuthModal({ open, onClose, onLoginSuccess, initialMode = 'login' }: AuthModalProps) {
+  const { signUp, signIn, resetPassword, configured } = useSupabaseAuth();
+  const [activeTab, setActiveTab] = useState<string>(initialMode);
   const [loading, setLoading] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [form] = Form.useForm();
+  const [resetSent, setResetSent] = useState(false);
+  const [loginForm] = Form.useForm();
+  const [registerForm] = Form.useForm();
+  const [resetForm] = Form.useForm();
 
-  // 弹窗打开时同步到指定模式
-  useEffect(() => {
-    if (open) {
-      setMode(initialMode);
-      form.resetFields();
-    }
-  }, [open, initialMode]);
-
-  const handleResetPassword = async () => {
-    if (!resetEmail) { message.warning('请输入注册邮箱'); return; }
-    setLoading(true);
-    const { error } = await onResetPassword(resetEmail);
-    setLoading(false);
-    if (error) { message.error(error.message); return; }
-    message.success('重置链接已发送到邮箱，请查收');
-    setMode('login');
-    setResetEmail('');
+  // 每次打开弹窗时重置状态
+  const handleOpen = (tab?: string) => {
+    setActiveTab(tab || initialMode);
+    setResetSent(false);
+    loginForm.resetFields();
+    registerForm.resetFields();
+    resetForm.resetFields();
   };
 
+  // 登录
   const handleLogin = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await loginForm.validateFields();
       setLoading(true);
-      const { error } = await onLogin(values.email, values.password);
-      setLoading(false);
+      const { error } = await signIn(values.email, values.password);
       if (error) {
-        message.error(error.message === 'Invalid login credentials' ? '邮箱或密码错误' : error.message);
-        return;
+        const msg = error.message || '';
+        if (msg.includes('Invalid login credentials') || msg.includes('Invalid')) {
+          message.error('邮箱或密码错误，如未注册请先注册');
+        } else {
+          message.error(msg);
+        }
+      } else {
+        message.success('登录成功');
+        onLoginSuccess(values.email);
+        onClose();
       }
-      message.success('登录成功！');
-      form.resetFields();
-      onSuccess(values.email);
     } catch {
-      // validation failed
+      // 表单验证失败，不做处理
+    } finally {
+      setLoading(false);
     }
   };
 
+  // 注册
   const handleRegister = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await registerForm.validateFields();
       if (values.password !== values.confirmPassword) {
-        message.error('两次密码不一致');
+        message.error('两次输入的密码不一致');
         return;
       }
       setLoading(true);
-      const { error } = await onRegister(values.email, values.password, values.displayName || '');
-      setLoading(false);
+      const { error } = await signUp(values.email, values.password, values.displayName);
       if (error) {
-        if (error.message.includes('验证')) {
-          message.info(error.message);
-          setMode('login');
-          form.resetFields();
+        const msg = error.message || '';
+        if (msg.includes('already registered') || msg.includes('already') || msg.includes('exists')) {
+          message.warning('该邮箱已注册，请直接登录');
+          loginForm.setFieldsValue({ email: values.email });
+          loginForm.setFieldsValue({ password: '' });
+          setActiveTab('login');
+        } else if (msg.includes('检查邮箱')) {
+          message.info('注册成功！请检查邮箱完成验证后再登录');
+          loginForm.setFieldsValue({ email: values.email });
+          loginForm.setFieldsValue({ password: '' });
+          setActiveTab('login');
         } else {
-          message.error(error.message);
+          message.error(msg);
         }
-        return;
+      } else {
+        message.success('注册成功，请登录');
+        // 预填邮箱，切换到登录页
+        loginForm.setFieldsValue({ email: values.email });
+        loginForm.setFieldsValue({ password: '' });
+        registerForm.resetFields();
+        setActiveTab('login');
       }
-      message.success('注册成功！');
-      form.resetFields();
-      onSuccess(values.email, true);
     } catch {
-      // validation failed
+      // 表单验证失败
+    } finally {
+      setLoading(false);
     }
   };
+
+  // 重置密码
+  const handleResetPassword = async () => {
+    try {
+      const values = await resetForm.validateFields();
+      setLoading(true);
+      const { error } = await resetPassword(values.email);
+      if (error) {
+        message.error(error.message);
+      } else {
+        setResetSent(true);
+        message.success('密码重置邮件已发送，请检查邮箱');
+      }
+    } catch {
+      // 表单验证失败
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 登录 tab 的回车键
+  const handleLoginKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleLogin();
+  };
+
+  const handleRegisterKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleRegister();
+  };
+
+  const handleResetKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleResetPassword();
+  };
+
+  if (!configured) {
+    return (
+      <Modal open={open} onCancel={onClose} footer={null} title="提示">
+        <div style={{ textAlign: 'center', padding: 32 }}>
+          认证服务未配置，无法登录/注册
+        </div>
+      </Modal>
+    );
+  }
 
   const tabItems = [
     {
       key: 'login',
       label: '登录',
       children: (
-        <Form form={form} layout="vertical" size="large">
-          <Form.Item name="email" label="邮箱" rules={[{ required: true, type: 'email', message: '请输入有效邮箱' }]}>
-            <Input prefix={<MailOutlined />} placeholder="your@email.com" />
+        <Form form={loginForm} layout="vertical" onKeyDown={handleLoginKeyDown}>
+          <Form.Item name="email" rules={[{ required: true, type: 'email', message: '请输入有效邮箱' }]}>
+            <Input prefix={<MailOutlined />} placeholder="邮箱" size="large" autoComplete="email" />
           </Form.Item>
-          <Form.Item name="password" label="密码" rules={[{ required: true, min: 6, message: '密码至少6位' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="输入密码" />
+          <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
+            <Input.Password prefix={<LockOutlined />} placeholder="密码" size="large" autoComplete="current-password" />
           </Form.Item>
-          <div style={{ textAlign: 'right', marginBottom: 8 }}>
-            <a onClick={() => setMode('reset')} style={{ color: '#1677ff', fontSize: 13, cursor: 'pointer' }}>忘记密码？</a>
-          </div>
-          <Button type="primary" onClick={handleLogin} loading={loading} block size="large" style={{ marginTop: 8 }}>
+          <Button type="primary" block size="large" loading={loading} onClick={handleLogin} style={{ marginBottom: 12 }}>
             登录
           </Button>
+          <div style={{ textAlign: 'center' }}>
+            <Button type="link" onClick={() => { setResetSent(false); resetForm.resetFields(); setActiveTab('reset'); }}>
+              忘记密码？
+            </Button>
+          </div>
         </Form>
       ),
     },
@@ -108,22 +162,57 @@ export default function AuthModal({ open, onClose, onLogin, onRegister, onResetP
       key: 'register',
       label: '注册',
       children: (
-        <Form form={form} layout="vertical" size="large">
-          <Form.Item name="displayName" label="昵称">
-            <Input prefix={<UserOutlined />} placeholder="选填，展示用名" />
+        <Form form={registerForm} layout="vertical" onKeyDown={handleRegisterKeyDown}>
+          <Form.Item name="displayName" rules={[{ required: true, message: '请输入昵称' }]}>
+            <Input prefix={<UserOutlined />} placeholder="昵称" size="large" />
           </Form.Item>
-          <Form.Item name="email" label="邮箱" rules={[{ required: true, type: 'email', message: '请输入有效邮箱' }]}>
-            <Input prefix={<MailOutlined />} placeholder="your@email.com" />
+          <Form.Item name="email" rules={[{ required: true, type: 'email', message: '请输入有效邮箱' }]}>
+            <Input prefix={<MailOutlined />} placeholder="邮箱（必填）" size="large" autoComplete="email" />
           </Form.Item>
-          <Form.Item name="password" label="密码" rules={[{ required: true, min: 6, message: '密码至少6位' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="设置密码（至少6位）" />
+          <Form.Item name="password" rules={[{ required: true, min: 6, message: '密码至少6位' }]}>
+            <Input.Password prefix={<LockOutlined />} placeholder="密码（至少6位）" size="large" autoComplete="new-password" />
           </Form.Item>
-          <Form.Item name="confirmPassword" label="确认密码" rules={[{ required: true, message: '请确认密码' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="再输入一次密码" />
+          <Form.Item name="confirmPassword" rules={[{ required: true, message: '请确认密码' }]}>
+            <Input.Password prefix={<LockOutlined />} placeholder="确认密码" size="large" autoComplete="new-password" />
           </Form.Item>
-          <Button type="primary" onClick={handleRegister} loading={loading} block size="large" style={{ marginTop: 8 }}>
+          <Button type="primary" block size="large" loading={loading} onClick={handleRegister}>
             注册
           </Button>
+          <div style={{ textAlign: 'center', marginTop: 12 }}>
+            <Button type="link" onClick={() => setActiveTab('login')}>
+              已有账号？去登录
+            </Button>
+          </div>
+        </Form>
+      ),
+    },
+    {
+      key: 'reset',
+      label: '重置密码',
+      children: resetSent ? (
+        <div style={{ textAlign: 'center', padding: 24 }}>
+          <p style={{ fontSize: 16, marginBottom: 16 }}>密码重置邮件已发送</p>
+          <p style={{ color: '#999' }}>请前往邮箱查收并点击重置链接</p>
+          <Button type="link" onClick={() => { setResetSent(false); resetForm.resetFields(); }}>
+            重新发送
+          </Button>
+          <Button type="link" onClick={() => setActiveTab('login')}>
+            返回登录
+          </Button>
+        </div>
+      ) : (
+        <Form form={resetForm} layout="vertical" onKeyDown={handleResetKeyDown}>
+          <Form.Item name="email" rules={[{ required: true, type: 'email', message: '请输入注册邮箱' }]}>
+            <Input prefix={<MailOutlined />} placeholder="请输入注册时使用的邮箱" size="large" autoComplete="email" />
+          </Form.Item>
+          <Button type="primary" block size="large" loading={loading} onClick={handleResetPassword} style={{ marginBottom: 12 }}>
+            发送重置邮件
+          </Button>
+          <div style={{ textAlign: 'center' }}>
+            <Button type="link" onClick={() => setActiveTab('login')}>
+              返回登录
+            </Button>
+          </div>
         </Form>
       ),
     },
@@ -132,31 +221,24 @@ export default function AuthModal({ open, onClose, onLogin, onRegister, onResetP
   return (
     <Modal
       open={open}
-      onCancel={() => { onClose(); form.resetFields(); }}
+      onCancel={onClose}
       footer={null}
-      width={400}
-      title={null}
+      destroyOnClose
+      width={420}
+      afterOpenChange={(visible) => { if (visible) handleOpen(); }}
     >
-      <div style={{ padding: '16px 0 0' }}>
-        {mode === 'reset' ? (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => setMode('login')} style={{ color: '#1677ff', padding: 0 }}>返回登录</Button>
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>重置密码</div>
-            <div style={{ fontSize: 13, color: '#999', marginBottom: 20 }}>输入注册邮箱，我们将发送密码重置链接</div>
-            <Input prefix={<MailOutlined />} placeholder="your@email.com" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} size="large" style={{ marginBottom: 16 }} />
-            <Button type="primary" onClick={handleResetPassword} loading={loading} block size="large">发送重置链接</Button>
-          </div>
-        ) : (
-          <Tabs
-            activeKey={mode}
-            onChange={(key) => { setMode(key as 'login' | 'register'); form.resetFields(); }}
-            centered
-            items={tabItems}
-          />
-        )}
-      </div>
+      <Tabs
+        activeKey={activeTab}
+        onChange={(key) => {
+          setActiveTab(key);
+          setResetSent(false);
+          if (key === 'login') loginForm.resetFields();
+          if (key === 'register') registerForm.resetFields();
+          if (key === 'reset') resetForm.resetFields();
+        }}
+        centered
+        items={tabItems}
+      />
     </Modal>
   );
 }
