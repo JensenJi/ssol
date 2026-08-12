@@ -70,13 +70,13 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
   return (
     <>
       <nav className="navbar">
-        {/* Logo区域：上方"搜索在线-ssol.cn"，下方标语 */}
+        {/* Logo区域 */}
         <div className="navbar-logo-group" onClick={onGoHome} style={{ cursor: 'pointer' }}>
           <div className="navbar-logo">
             <PushpinIcon size={24} color="#fff" className="logo-icon" />
             <div className="logo-text-group">
-              <span className="logo-text logo-drive-in">搜索在线 <span className="logo-url">ssol.cn</span></span>
-              <span className="logo-slogan">你身边的专业人才库</span>
+              <span className="logo-text logo-drive-in">搜索在线</span>
+              <span className="logo-slogan" style={{ fontSize: 11, opacity: 0.85 }}>https://ssol.cn</span>
             </div>
           </div>
         </div>
