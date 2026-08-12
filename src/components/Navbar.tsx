@@ -73,7 +73,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
         {/* Logo区域 */}
         <div className="navbar-logo-group" onClick={onGoHome} style={{ cursor: 'pointer' }}>
           <div className="navbar-logo">
-            <PushpinIcon size={24} color="#fff" className="logo-icon" />
+            <PushpinIcon size={24} color="#7179e9" className="logo-icon" />
             <div className="logo-text-group">
               <span className="logo-text logo-drive-in">搜索在线</span>
               <span className="logo-slogan" style={{ fontSize: 11, opacity: 0.85 }}>https://ssol.cn</span>
