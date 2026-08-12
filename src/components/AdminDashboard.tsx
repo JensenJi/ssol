@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import type { Doctor } from '../data/mockData';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import VisitAnalytics from './VisitAnalytics';
 
 const { Title, Text } = Typography;
 
@@ -596,39 +597,13 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
           }] : []),
         ]} style={{ marginBottom: 24 }} />
 
-        {/* 设备分布和访客地区 — 仅超级管理员可见 */}
-        {isSuperAdmin && (activeTab === 'pending' || activeTab === 'all') && (
-        <Row gutter={[12, 12]}>
-          <Col xs={24} md={12}>
-            <Card title="设备分布" size="small" style={{ marginBottom: 16 }}>
-              {deviceStats.map((d) => (
-                <div key={d.name} style={{ marginBottom: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <Text>{d.name}</Text>
-                    <Text type="secondary">{d.count} ({d.percent}%)</Text>
-                  </div>
-                  <div style={{ height: 6, background: '#f0f0f0', borderRadius: 3, marginTop: 4 }}>
-                    <div style={{ height: '100%', width: `${d.percent}%`, background: '#1677ff', borderRadius: 3 }} />
-                  </div>
-                </div>
-              ))}
-            </Card>
-          </Col>
-          <Col xs={24} md={12}>
-            <Card title="访客地区 TOP" size="small">
-              {regionStats.map((r, i) => (
-                <div key={r.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 13 }}>
-                  <Text>
-                    {i < 3 ? <Tag color={i === 0 ? 'gold' : i === 1 ? 'silver' : 'orange'} style={{ marginRight: 6 }}>{i + 1}</Tag> : <span style={{ width: 24, display: 'inline-block', textAlign: 'center', marginRight: 6 }}>{i + 1}</span>}
-                    {r.name}
-                  </Text>
-                  <Text type="secondary">{r.count}人</Text>
-                </div>
-              ))}
-            </Card>
-          </Col>
-        </Row>
+        {/* 访问分析 — 仅超级管理员可见 */}
+        {isSuperAdmin && (
+          <div style={{ marginBottom: 24 }}>
+            <VisitAnalytics />
+          </div>
         )}
+
       </div>
 
       {/* 修改密码弹窗 */}

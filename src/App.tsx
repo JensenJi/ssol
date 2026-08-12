@@ -9,29 +9,14 @@ import UserProfile from './components/UserProfile';
 import AdminDashboard from './components/AdminDashboard';
 import PersonalCenter from './components/PersonalCenter';
 import UserManagement from './components/UserManagement';
-import { userAPI, visitorAPI } from './lib/cloudbase';
+import { userAPI } from './lib/cloudbase';
+import { recordVisit } from './lib/visits';
 import { mockDoctors, calculateDistance } from './data/mockData';
 import type { Doctor } from './data/mockData';
 import { useSupabaseAuth } from './hooks/useSupabaseAuth';
 import AuthModal from './components/AuthModal';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import './App.css';
-
-// 检测设备信息
-function detectDeviceInfo() {
-  const ua = navigator.userAgent;
-  let os = '未知', device = '电脑', browser = '未知';
-  if (/Android/i.test(ua)) { os = 'Android'; device = '手机'; }
-  else if (/iPhone|iPad|iPod/i.test(ua)) { os = 'iOS'; device = /iPad/i.test(ua) ? '平板' : '手机'; }
-  else if (/Mac/i.test(ua)) { os = 'macOS'; }
-  else if (/Windows/i.test(ua)) { os = 'Windows'; }
-  else if (/Linux/i.test(ua)) { os = 'Linux'; }
-  if (/Chrome/i.test(ua) && !/Edg/i.test(ua)) browser = 'Chrome';
-  else if (/Edg/i.test(ua)) browser = 'Edge';
-  else if (/Firefox/i.test(ua)) browser = 'Firefox';
-  else if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) browser = 'Safari';
-  return { os, device, browser };
-}
 
 function App() {
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -48,7 +33,6 @@ function App() {
   });
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [favTarget, setFavTarget] = useState<Doctor | null>(null);
-  const [deviceInfo] = useState(detectDeviceInfo);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authInitialMode, setAuthInitialMode] = useState<'login' | 'register'>('login');
 
@@ -198,7 +182,7 @@ function App() {
       setExperts((prev) => [...prev, { ...testUser, location_lat: 39.9, location_lng: 116.4, visible_range: 99999 } as unknown as Doctor]);
     }
 
-    visitorAPI.recordVisit({ ...deviceInfo, url: window.location.href }).catch(() => {});
+    recordVisit(window.location.pathname).catch(() => {});
   }, []);
 
   // 尝试获取用户位置：浏览器GPS优先，备选IP定位
