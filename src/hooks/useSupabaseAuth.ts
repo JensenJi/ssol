@@ -59,10 +59,8 @@ export function useSupabaseAuth() {
     });
     
     if (error) return { error };
-    if (data.user && !data.session) {
-      return { error: { message: '注册成功！请检查邮箱完成验证后再登录。' } };
-    }
-    return { error: null };
+    // 返回 session 信息，让调用方判断是否需要邮箱确认
+    return { error: null, session: data.session };
   }, [configured]);
 
   // 邮箱登录

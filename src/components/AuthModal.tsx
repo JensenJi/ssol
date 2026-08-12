@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal, Form, Input, Button, Tabs, message } from 'antd';
 import { MailOutlined, LockOutlined } from '@ant-design/icons';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
 
 interface AuthModalProps {
@@ -15,6 +16,7 @@ export default function AuthModal({ open, onClose, onAuthSuccess, initialMode = 
   const [activeTab, setActiveTab] = useState<string>(initialMode);
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
   const [loginForm] = Form.useForm();
   const [registerForm] = Form.useForm();
   const [resetForm] = Form.useForm();
@@ -36,7 +38,10 @@ export default function AuthModal({ open, onClose, onAuthSuccess, initialMode = 
       const { error } = await signIn(values.email, values.password);
       if (error) {
         const msg = error.message || '';
-        if (msg.includes('Invalid login credentials') || msg.includes('Invalid')) {
+        if (msg.includes('Email not confirmed')) {
+          message.warning('邮箱尚未确认，请检查注册时收到的确认邮件，或点击下方重发');
+          setResendEmail(values.email);
+        } else if (msg.includes('Invalid login credentials') || msg.includes('Invalid')) {
           message.error('邮箱或密码错误，如未注册请先注册');
         } else {
           message.error(msg);
@@ -62,33 +67,26 @@ export default function AuthModal({ open, onClose, onAuthSuccess, initialMode = 
         return;
       }
       setLoading(true);
-      const { error } = await signUp(values.email, values.password);
-      if (error) {
-        const msg = error.message || '';
+      const result = await signUp(values.email, values.password);
+      if (result.error) {
+        const msg = result.error.message || '';
         if (msg.includes('already registered') || msg.includes('already') || msg.includes('exists')) {
           message.warning('该邮箱已注册，请直接登录');
-          loginForm.setFieldsValue({ email: values.email });
-          setActiveTab('login');
-        } else if (msg.includes('检查邮箱')) {
-          message.info('注册成功！请检查邮箱完成验证后再登录');
           loginForm.setFieldsValue({ email: values.email });
           setActiveTab('login');
         } else {
           message.error(msg);
         }
+      } else if (result.session) {
+        // 注册成功且已自动获得会话（邮箱确认已关闭）
+        message.success('注册成功！');
+        onAuthSuccess(values.email, 'register');
+        onClose();
       } else {
-        // 注册成功，尝试自动登录
-        const { error: loginErr } = await signIn(values.email, values.password);
-        if (loginErr) {
-          // 需要邮箱确认，提示用户
-          message.info('注册成功！请检查邮箱完成验证后登录');
-          loginForm.setFieldsValue({ email: values.email });
-          setActiveTab('login');
-        } else {
-          message.success('注册成功！');
-          onAuthSuccess(values.email, 'register');
-          onClose();
-        }
+        // 注册成功但需要邮箱确认
+        message.success('注册成功！请检查邮箱点击确认链接后再登录');
+        loginForm.setFieldsValue({ email: values.email });
+        setActiveTab('login');
       }
     } catch {
       // 表单验证失败
@@ -151,6 +149,17 @@ export default function AuthModal({ open, onClose, onAuthSuccess, initialMode = 
           <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
             <Input.Password prefix={<LockOutlined />} placeholder="密码" size="large" autoComplete="current-password" />
           </Form.Item>
+          {resendEmail && (
+            <div style={{ background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: 13 }}>
+              <div style={{ color: '#d46b08', marginBottom: 4 }}>邮箱尚未确认，无法登录</div>
+              <Button type="link" size="small" style={{ padding: 0, fontSize: 13 }} onClick={async () => {
+                if (!isSupabaseConfigured()) return;
+                const { error } = await supabase.auth.resend({ type: 'signup', email: resendEmail });
+                if (error) message.error(error.message);
+                else message.success('确认邮件已重发，请检查邮箱');
+              }}>重新发送确认邮件</Button>
+            </div>
+          )}
           <Button type="primary" block size="large" loading={loading} onClick={handleLogin} style={{ marginBottom: 12 }}>
             登录
           </Button>

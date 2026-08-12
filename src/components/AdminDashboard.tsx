@@ -89,6 +89,39 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
   const [activeTab, setActiveTab] = useState('pending');
   const [editUser, setEditUser] = useState<Partial<Doctor> | null>(null);
   const [editForm] = Form.useForm();
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreateUser = () => {
+    setIsCreating(true);
+    setEditUser(null);
+    editForm.resetFields();
+  };
+
+  const handleSaveCreate = async () => {
+    try {
+      const values = await editForm.validateFields();
+      const newUserId = `admin-created-${Date.now()}`;
+      const newUser = {
+        id: newUserId,
+        name: values.name,
+        category: values.category,
+        hospital: values.hospital,
+        title: values.title,
+        province: values.province,
+        city: values.city,
+        contact_phone: values.contact_phone,
+        bio: values.bio,
+        keywords: values.keywords ? values.keywords.split(/[,\u3001\s]+/).filter(Boolean) : [],
+        likes: 0,
+        verified: true,
+        createdAt: new Date().toISOString(),
+      } as Partial<Doctor>;
+      onUpdateUser(newUser);
+      message.success(`已创建用户「${values.name}」的个人主页`);
+      setIsCreating(false);
+      editForm.resetFields();
+    } catch { /* ignore */ }
+  };
 
   const handleViewDetail = (user: Partial<Doctor>) => {
     setDetailUser(user);
@@ -335,14 +368,17 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
             <DashboardOutlined style={{ color: '#1677ff', marginRight: 8 }} />
             管理后台
           </Title>
-          <Button
-            type="link"
-            icon={<KeyOutlined />}
-            onClick={() => setPwdModalOpen(true)}
-            style={{ fontSize: 14 }}
-          >
-            修改密码
-          </Button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button type="primary" icon={<UserAddOutlined />} onClick={handleCreateUser}>添加用户</Button>
+            <Button
+              type="link"
+              icon={<KeyOutlined />}
+              onClick={() => setPwdModalOpen(true)}
+              style={{ fontSize: 14 }}
+            >
+              修改密码
+            </Button>
+          </div>
         </div>
 
         {/* 角色提示 */}
@@ -695,11 +731,14 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
 
       {/* 编辑用户信息弹窗 */}
       <Modal
-        title={<span><EditOutlined style={{ color: '#1677ff', marginRight: 8 }} />编辑用户信息</span>}
-        open={!!editUser}
-        onCancel={() => { setEditUser(null); editForm.resetFields(); }}
+        title={<span><EditOutlined style={{ color: '#1677ff', marginRight: 8 }} />{isCreating ? '创建用户个人主页' : '编辑用户信息'}</span>}
+        open={!!editUser || isCreating}
+        onCancel={() => { setEditUser(null); setIsCreating(false); editForm.resetFields(); }}
         width={560}
-        footer={[
+        footer={isCreating ? [
+          <Button key="cancel" onClick={() => { setIsCreating(false); editForm.resetFields(); }}>取消</Button>,
+          <Button key="save" type="primary" icon={<CheckOutlined />} onClick={handleSaveCreate}>创建</Button>,
+        ] : [
           <Button key="delete" danger icon={<DeleteOutlined />} onClick={() => { if (editUser) handleDeleteUser(editUser); setEditUser(null); }}>
             删除用户
           </Button>,
@@ -707,7 +746,7 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
           <Button key="save" type="primary" icon={<CheckOutlined />} onClick={handleSaveEdit}>保存</Button>,
         ]}
       >
-        {editUser && (
+        {(editUser || isCreating) && (
           <Form form={editForm} layout="vertical" size="large" style={{ paddingTop: 8 }}>
             <Row gutter={16}>
               <Col span={12}>
