@@ -14,6 +14,7 @@ import { mockDoctors, calculateDistance } from './data/mockData';
 import type { Doctor } from './data/mockData';
 import { useSupabaseAuth } from './hooks/useSupabaseAuth';
 import AuthModal from './components/AuthModal';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 import './App.css';
 
 // 检测设备信息
@@ -89,9 +90,10 @@ function App() {
   const [ipLocation, setIpLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const dragRef = useRef<{ startY: number; startHeight: number; wasExpanded: boolean } | null>(null);
 
-  // ==================== 管理员角色体系 ====================
+  // ==================== 管理员角色体系（Supabase 数据库 + localStorage 缓存） ====================
   // 超级管理员：第一个注册的用户，拥有全部权限
   // 子管理员：由超级管理员指定，可管理用户但无法查看访问数据
+  // 角色存储在 Supabase user_roles 表中，跨设备同步
 
   function getSuperAdminEmail(): string {
     try { return JSON.parse(localStorage.getItem('ssol_super_admin') || '""'); } catch { return ''; }
@@ -111,6 +113,40 @@ function App() {
     const superEmail = getSuperAdminEmail();
     return superEmail ? [superEmail, ...getSubAdminEmails()] : getSubAdminEmails();
   }
+
+  // 从 Supabase 同步管理员角色到 localStorage（跨设备关键！）
+  const syncAdminFromSupabase = useCallback(async () => {
+    if (!isSupabaseConfigured()) return;
+    try {
+      const { data, error } = await supabase.from('user_roles').select('*');
+      if (error || !data) return; // 表不存在时静默回退到 localStorage
+      const superRow = data.find((r: any) => r.role === 'super_admin');
+      const subRows = data.filter((r: any) => r.role === 'sub_admin');
+      if (superRow) {
+        setSuperAdminEmail(superRow.email);
+      } else if (data.length === 0) {
+        // 表中无记录，回退到 localStorage 判断
+        return;
+      }
+      const subs = subRows.map((r: any) => r.email.toLowerCase());
+      localStorage.setItem('ssol_sub_admins', JSON.stringify(subs));
+    } catch { /* 表不存在，使用 localStorage 回退 */ }
+  }, []);
+
+  // 写入角色到 Supabase 数据库
+  const writeRoleToSupabase = useCallback(async (email: string, role: string) => {
+    if (!isSupabaseConfigured()) return;
+    try {
+      await supabase.from('user_roles').upsert({ email: email.toLowerCase(), role }, { onConflict: 'email' });
+    } catch { /* ignore */ }
+  }, []);
+
+  const deleteRoleFromSupabase = useCallback(async (email: string) => {
+    if (!isSupabaseConfigured()) return;
+    try {
+      await supabase.from('user_roles').delete().eq('email', email.toLowerCase());
+    } catch { /* ignore */ }
+  }, []);
 
   // ==================== 持久化 ====================
   useEffect(() => { localStorage.setItem('ssol_loggedIn', String(isLoggedIn)); }, [isLoggedIn]);
@@ -337,9 +373,12 @@ function App() {
   }, []);
 
   // 登录/注册成功回调
-  const handleAuthSuccess = useCallback((email: string, type: 'login' | 'register') => {
+  const handleAuthSuccess = useCallback(async (email: string, type: 'login' | 'register') => {
     setAuthModalOpen(false);
     setIsLoggedIn(true);
+
+    // 从 Supabase 同步管理员角色（跨设备关键步骤）
+    await syncAdminFromSupabase();
 
     // 确保用户记录存在
     const existingUser = registeredUsers.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
@@ -360,11 +399,12 @@ function App() {
       setCurrentUser(existingUser);
     }
 
-    // 管理员角色判断
+    // 管理员角色判断（同步后检查）
     const superAdmin = getSuperAdminEmail();
     if (!superAdmin) {
-      // 首位用户自动提升为超级管理员
+      // 首位用户自动提升为超级管理员（写入 Supabase + localStorage）
       setSuperAdminEmail(email);
+      await writeRoleToSupabase(email, 'super_admin');
       setIsAdminLoggedIn(true);
       setCurrentPage('admin');
       message.success('您已成为首位超级管理员，进入管理后台');
@@ -379,25 +419,27 @@ function App() {
     // 普通用户
     setCurrentPage('personal');
     if (favTarget) { setFavorites((prev) => [...prev, favTarget.id]); message.success(`已收藏 ${favTarget.name}`); setFavTarget(null); }
-  }, [favTarget, registeredUsers]);
+  }, [favTarget, registeredUsers, syncAdminFromSupabase, writeRoleToSupabase]);
 
-  // 超级管理员指定子管理员
-  const handlePromoteAdmin = useCallback((email: string) => {
+  // 超级管理员指定子管理员（写入 Supabase + localStorage）
+  const handlePromoteAdmin = useCallback(async (email: string) => {
     const subs = getSubAdminEmails();
     const lower = email.toLowerCase();
     if (!subs.includes(lower)) {
       subs.push(lower);
       localStorage.setItem('ssol_sub_admins', JSON.stringify(subs));
+      await writeRoleToSupabase(email, 'sub_admin');
       message.success(`已将「${email}」设为子管理员`);
     }
-  }, []);
+  }, [writeRoleToSupabase]);
 
-  // 超级管理员取消子管理员
-  const handleDemoteAdmin = useCallback((email: string) => {
+  // 超级管理员取消子管理员（从 Supabase + localStorage 删除）
+  const handleDemoteAdmin = useCallback(async (email: string) => {
     const subs = getSubAdminEmails().filter((e) => e !== email.toLowerCase());
     localStorage.setItem('ssol_sub_admins', JSON.stringify(subs));
+    await deleteRoleFromSupabase(email);
     message.success(`已取消「${email}」的管理员权限`);
-  }, []);
+  }, [deleteRoleFromSupabase]);
 
   // ==================== 管理员操作 ====================
   const handleApprove = useCallback(async (id: string) => {
