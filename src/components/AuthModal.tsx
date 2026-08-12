@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { Modal, Form, Input, Button, Tabs, message } from 'antd';
-import { MailOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
+import { MailOutlined, LockOutlined } from '@ant-design/icons';
 import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
 
 interface AuthModalProps {
   open: boolean;
   onClose: () => void;
-  onLoginSuccess: (email: string) => void;
+  onAuthSuccess: (email: string, type: 'login' | 'register') => void;
   initialMode?: 'login' | 'register';
 }
 
-export default function AuthModal({ open, onClose, onLoginSuccess, initialMode = 'login' }: AuthModalProps) {
+export default function AuthModal({ open, onClose, onAuthSuccess, initialMode = 'login' }: AuthModalProps) {
   const { signUp, signIn, resetPassword, configured } = useSupabaseAuth();
   const [activeTab, setActiveTab] = useState<string>(initialMode);
   const [loading, setLoading] = useState(false);
@@ -43,17 +43,17 @@ export default function AuthModal({ open, onClose, onLoginSuccess, initialMode =
         }
       } else {
         message.success('登录成功');
-        onLoginSuccess(values.email);
+        onAuthSuccess(values.email, 'login');
         onClose();
       }
     } catch {
-      // 表单验证失败，不做处理
+      // 表单验证失败
     } finally {
       setLoading(false);
     }
   };
 
-  // 注册
+  // 注册（只需邮箱+密码+确认密码）
   const handleRegister = async () => {
     try {
       const values = await registerForm.validateFields();
@@ -62,29 +62,33 @@ export default function AuthModal({ open, onClose, onLoginSuccess, initialMode =
         return;
       }
       setLoading(true);
-      const { error } = await signUp(values.email, values.password, values.displayName);
+      const { error } = await signUp(values.email, values.password);
       if (error) {
         const msg = error.message || '';
         if (msg.includes('already registered') || msg.includes('already') || msg.includes('exists')) {
           message.warning('该邮箱已注册，请直接登录');
           loginForm.setFieldsValue({ email: values.email });
-          loginForm.setFieldsValue({ password: '' });
           setActiveTab('login');
         } else if (msg.includes('检查邮箱')) {
           message.info('注册成功！请检查邮箱完成验证后再登录');
           loginForm.setFieldsValue({ email: values.email });
-          loginForm.setFieldsValue({ password: '' });
           setActiveTab('login');
         } else {
           message.error(msg);
         }
       } else {
-        message.success('注册成功，请登录');
-        // 预填邮箱，切换到登录页
-        loginForm.setFieldsValue({ email: values.email });
-        loginForm.setFieldsValue({ password: '' });
-        registerForm.resetFields();
-        setActiveTab('login');
+        // 注册成功，尝试自动登录
+        const { error: loginErr } = await signIn(values.email, values.password);
+        if (loginErr) {
+          // 需要邮箱确认，提示用户
+          message.info('注册成功！请检查邮箱完成验证后登录');
+          loginForm.setFieldsValue({ email: values.email });
+          setActiveTab('login');
+        } else {
+          message.success('注册成功！');
+          onAuthSuccess(values.email, 'register');
+          onClose();
+        }
       }
     } catch {
       // 表单验证失败
@@ -163,20 +167,17 @@ export default function AuthModal({ open, onClose, onLoginSuccess, initialMode =
       label: '注册',
       children: (
         <Form form={registerForm} layout="vertical" onKeyDown={handleRegisterKeyDown}>
-          <Form.Item name="displayName" rules={[{ required: true, message: '请输入昵称' }]}>
-            <Input prefix={<UserOutlined />} placeholder="昵称" size="large" />
-          </Form.Item>
           <Form.Item name="email" rules={[{ required: true, type: 'email', message: '请输入有效邮箱' }]}>
-            <Input prefix={<MailOutlined />} placeholder="邮箱（必填）" size="large" autoComplete="email" />
+            <Input prefix={<MailOutlined />} placeholder="邮箱" size="large" autoComplete="email" />
           </Form.Item>
           <Form.Item name="password" rules={[{ required: true, min: 6, message: '密码至少6位' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="密码（至少6位）" size="large" autoComplete="new-password" />
+            <Input.Password prefix={<LockOutlined />} placeholder="设置密码（至少6位）" size="large" autoComplete="new-password" />
           </Form.Item>
           <Form.Item name="confirmPassword" rules={[{ required: true, message: '请确认密码' }]}>
             <Input.Password prefix={<LockOutlined />} placeholder="确认密码" size="large" autoComplete="new-password" />
           </Form.Item>
           <Button type="primary" block size="large" loading={loading} onClick={handleRegister}>
-            注册
+            完成注册
           </Button>
           <div style={{ textAlign: 'center', marginTop: 12 }}>
             <Button type="link" onClick={() => setActiveTab('login')}>

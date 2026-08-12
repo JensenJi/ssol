@@ -34,7 +34,6 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogKeyword, setDialogKeyword] = useState('');
   const [dialogDistance, setDialogDistance] = useState(99999);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   // 手动更正位置
   const [manualProvince, setManualProvince] = useState('');
@@ -96,7 +95,7 @@ export default function Navbar({ onSearch, onLocationUpdate, onDistanceSelect, o
             </>
           ) : (
             <>
-              <Button type="text" icon={<UserAddOutlined />} onClick={() => { setAuthModalOpen(false); onGoRegister?.(); }} className="nav-btn-sm nav-btn-register">注册</Button>
+              <Button type="text" icon={<UserAddOutlined />} onClick={onGoRegister} className="nav-btn-sm nav-btn-register">注册</Button>
               <Button type="text" icon={<LoginOutlined />} onClick={onGoLogin} className="nav-btn-sm nav-btn-login">登录</Button>
             </>
           )}

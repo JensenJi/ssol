@@ -20,6 +20,11 @@ interface AdminDashboardProps {
   onReject: (id: string) => void;
   onUpdateUser: (user: Partial<Doctor>) => void;
   onDeleteUser: (id: string) => void;
+  isSuperAdmin: boolean;
+  currentUserEmail?: string;
+  adminEmails: string[];
+  onPromoteAdmin: (email: string) => void;
+  onDemoteAdmin: (email: string) => void;
 }
 
 // 模拟访客统计数据
@@ -74,7 +79,7 @@ function checkPhotoViolation(photo: string): boolean {
   return photo.startsWith('http');
 }
 
-export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, onApprove, onReject, onUpdateUser, onDeleteUser }: AdminDashboardProps) {
+export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, onApprove, onReject, onUpdateUser, onDeleteUser, isSuperAdmin, currentUserEmail, adminEmails, onPromoteAdmin, onDemoteAdmin }: AdminDashboardProps) {
   const [pwdModalOpen, setPwdModalOpen] = useState(false);
   const [pwdForm] = Form.useForm();
   const [detailUser, setDetailUser] = useState<Partial<Doctor> | null>(null);
@@ -340,7 +345,18 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
           </Button>
         </div>
 
-        {/* 统计卡片 */}
+        {/* 角色提示 */}
+        {!isSuperAdmin && (
+          <Alert
+            type="info"
+            showIcon
+            message="您是子管理员，拥有用户管理权限，但无法查看后台访问数据"
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
+        {/* 统计卡片 — 仅超级管理员可见 */}
+        {isSuperAdmin && (
         <Row gutter={[12, 12]} style={{ marginBottom: 24 }}>
           <Col xs={24} sm={12} md={6}>
             <Card>
@@ -376,13 +392,14 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
             <Card>
               <Statistic
                 title="已认证专家"
-                value={16}
+                value={registeredUsers.filter(u => u.verified).length}
                 prefix={<SafetyCertificateOutlined />}
                 valueStyle={{ color: '#722ed1' }}
               />
             </Card>
           </Col>
         </Row>
+        )}
 
         {/* 用户管理 Tabs */}
         <Tabs activeKey={activeTab} onChange={setActiveTab} size="small" items={[
@@ -457,10 +474,94 @@ export default function AdminDashboard({ onBack, pendingUsers, registeredUsers, 
               </div>
             ),
           },
+          ...(isSuperAdmin ? [{
+            key: 'admins',
+            label: `管理员管理 (${adminEmails.length})`,
+            children: (
+              <div>
+                <div style={{ marginBottom: 16, color: '#666', fontSize: 13 }}>
+                  超级管理员可以指定其他注册用户为子管理员。子管理员可以审核用户、编辑用户信息，但无法查看后台访问数据。
+                </div>
+                <Table
+                  columns={[
+                    {
+                      title: '邮箱', dataIndex: 'email', key: 'email',
+                      render: (e: string) => e || '-',
+                    },
+                    {
+                      title: '姓名', key: 'name',
+                      render: (_: unknown, record: any) => {
+                        const u = allUsers.find((x) => (x as any).email?.toLowerCase() === record.email?.toLowerCase());
+                        return u?.name || '-';
+                      },
+                    },
+                    {
+                      title: '角色', key: 'role',
+                      render: (_: unknown, record: any) => {
+                        const superEmail = JSON.parse(localStorage.getItem('ssol_super_admin') || '""');
+                        return record.email?.toLowerCase() === superEmail?.toLowerCase()
+                          ? <Tag color="red">超级管理员</Tag>
+                          : <Tag color="blue">子管理员</Tag>;
+                      },
+                    },
+                    {
+                      title: '操作', key: 'action', width: 150,
+                      render: (_: unknown, record: any) => {
+                        const superEmail = JSON.parse(localStorage.getItem('ssol_super_admin') || '""');
+                        const isSuper = record.email?.toLowerCase() === superEmail?.toLowerCase();
+                        if (isSuper) return <span style={{ color: '#999' }}>—</span>;
+                        return (
+                          <Button danger size="small" icon={<CloseOutlined />} onClick={() => {
+                            Modal.confirm({
+                              title: '确认取消管理员权限',
+                              content: `确定要取消「${record.email}」的管理员权限吗？`,
+                              onOk: () => onDemoteAdmin(record.email),
+                            });
+                          }}>
+                            取消权限
+                          </Button>
+                        );
+                      },
+                    },
+                  ]}
+                  dataSource={adminEmails.map((e, i) => ({ email: e, key: `admin-${i}` }))}
+                  pagination={false}
+                  size="small"
+                  scroll={{ x: 600 }}
+                />
+                <div style={{ marginTop: 24 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 12 }}>指定新管理员</div>
+                  <Table
+                    columns={[
+                      { title: '邮箱', dataIndex: 'email', key: 'email', render: (e: string) => e || '-' },
+                      { title: '姓名', key: 'name', render: (_: unknown, record: any) => record.name || '-' },
+                      {
+                        title: '操作', key: 'action', width: 120,
+                        render: (_: unknown, record: any) => {
+                          const email = (record as any).email;
+                          if (!email || adminEmails.includes(email.toLowerCase())) return <span style={{ color: '#999' }}>已是管理员</span>;
+                          return (
+                            <Button type="primary" size="small" icon={<CheckOutlined />} onClick={() => onPromoteAdmin(email)}>
+                              设为管理员
+                            </Button>
+                          );
+                        },
+                      },
+                    ]}
+                    dataSource={registeredUsers.filter((u) => (u as any).email && !adminEmails.includes((u as any).email?.toLowerCase())).map((u, i) => ({ ...u, key: `reg-${i}` }))}
+                    pagination={{ pageSize: 5 }}
+                    size="small"
+                    scroll={{ x: 500 }}
+                    locale={{ emptyText: '暂无可指定的用户' }}
+                  />
+                </div>
+              </div>
+            ),
+          }] : []),
         ]} style={{ marginBottom: 24 }} />
 
-        {/* 设备分布和访客地区 - 仅在待审核/所有用户页显示 */}
-        {(activeTab === 'pending' || activeTab === 'all') && (
+        {/* 设备分布和访客地区 — 仅超级管理员可见 */}
+        {isSuperAdmin && (activeTab === 'pending' || activeTab === 'all') && (
         <Row gutter={[12, 12]}>
           <Col xs={24} md={12}>
             <Card title="设备分布" size="small" style={{ marginBottom: 16 }}>

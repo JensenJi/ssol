@@ -7,7 +7,6 @@ import MapContainer from './components/MapContainer';
 import ResultTable from './components/ResultTable';
 import UserProfile from './components/UserProfile';
 import AdminDashboard from './components/AdminDashboard';
-import AdminLogin from './components/AdminLogin';
 import PersonalCenter from './components/PersonalCenter';
 import UserManagement from './components/UserManagement';
 import { userAPI, visitorAPI } from './lib/cloudbase';
@@ -71,7 +70,7 @@ function App() {
     }
   }, [supabaseUser]);
 
-  const [currentPage, setCurrentPage] = useState<'home' | 'admin' | 'personal' | 'users' | 'admin-login'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'admin' | 'personal' | 'users'>('home');
   const [currentUser, setCurrentUser] = useState<Partial<Doctor> | null>(() => {
     const saved = localStorage.getItem('ssol_currentUser');
     return saved ? JSON.parse(saved) : null;
@@ -90,34 +89,27 @@ function App() {
   const [ipLocation, setIpLocation] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const dragRef = useRef<{ startY: number; startHeight: number; wasExpanded: boolean } | null>(null);
 
-  // ==================== 管理员工具函数 ====================
-  function isAdminEmail(email?: string): boolean {
+  // ==================== 管理员角色体系 ====================
+  // 超级管理员：第一个注册的用户，拥有全部权限
+  // 子管理员：由超级管理员指定，可管理用户但无法查看访问数据
+
+  function getSuperAdminEmail(): string {
+    try { return JSON.parse(localStorage.getItem('ssol_super_admin') || '""'); } catch { return ''; }
+  }
+  function setSuperAdminEmail(email: string) {
+    localStorage.setItem('ssol_super_admin', JSON.stringify(email.toLowerCase()));
+  }
+  function getSubAdminEmails(): string[] {
+    try { return JSON.parse(localStorage.getItem('ssol_sub_admins') || '[]'); } catch { return []; }
+  }
+  function isAnyAdmin(email?: string): boolean {
     if (!email) return false;
-    try {
-      const emails = JSON.parse(localStorage.getItem('ssol_admin_emails') || '[]');
-      return emails.includes(email.toLowerCase());
-    } catch {
-      return false;
-    }
+    const lower = email.toLowerCase();
+    return getSuperAdminEmail() === lower || getSubAdminEmails().includes(lower);
   }
-
-  function addAdminEmail(email: string) {
-    try {
-      const emails = JSON.parse(localStorage.getItem('ssol_admin_emails') || '[]');
-      const lower = email.toLowerCase();
-      if (!emails.includes(lower)) {
-        emails.push(lower);
-        localStorage.setItem('ssol_admin_emails', JSON.stringify(emails));
-      }
-    } catch { /* ignore */ }
-  }
-
-  function getAdminEmails(): string[] {
-    try {
-      return JSON.parse(localStorage.getItem('ssol_admin_emails') || '[]');
-    } catch {
-      return [];
-    }
+  function getAllAdminEmails(): string[] {
+    const superEmail = getSuperAdminEmail();
+    return superEmail ? [superEmail, ...getSubAdminEmails()] : getSubAdminEmails();
   }
 
   // ==================== 持久化 ====================
@@ -247,24 +239,20 @@ function App() {
   // ==================== 管理后台入口 ====================
   useEffect(() => {
     const checkAdminHash = () => {
-      if (window.location.hash === '#/admin-login') {
-        setCurrentPage('admin-login');
-      } else if (window.location.hash === '#/admin') {
+      if (window.location.hash === '#/admin') {
         if (!isLoggedIn) {
+          setAuthInitialMode('login');
           setAuthModalOpen(true);
-        } else if (isAdminEmail(supabaseUser?.email)) {
+        } else if (isAnyAdmin(supabaseUser?.email)) {
           setIsAdminLoggedIn(true);
           setCurrentPage('admin');
+        } else if (!getSuperAdminEmail() && supabaseUser?.email) {
+          setSuperAdminEmail(supabaseUser.email);
+          setIsAdminLoggedIn(true);
+          setCurrentPage('admin');
+          message.success('您已成为首位超级管理员');
         } else {
-          // 已登录但非管理员：尝试设为管理员
-          if (getAdminEmails().length === 0 && supabaseUser?.email) {
-            addAdminEmail(supabaseUser.email);
-            setIsAdminLoggedIn(true);
-            setCurrentPage('admin');
-            message.success('您已成为首位管理员');
-          } else {
-            message.warning('您没有管理员权限');
-          }
+          message.warning('您没有管理员权限');
         }
       }
     };
@@ -274,19 +262,13 @@ function App() {
       if (e.ctrlKey && e.shiftKey && e.key === 'A') {
         e.preventDefault();
         if (!isLoggedIn) {
+          setAuthInitialMode('login');
           setAuthModalOpen(true);
-        } else if (isAdminEmail(supabaseUser?.email)) {
+        } else if (isAnyAdmin(supabaseUser?.email)) {
           setIsAdminLoggedIn(true);
           setCurrentPage('admin');
         } else {
-          if (getAdminEmails().length === 0 && supabaseUser?.email) {
-            addAdminEmail(supabaseUser.email);
-            setIsAdminLoggedIn(true);
-            setCurrentPage('admin');
-            message.success('您已成为首位管理员');
-          } else {
-            message.warning('您没有管理员权限');
-          }
+          message.warning('您没有管理员权限');
         }
       }
     };
@@ -354,81 +336,68 @@ function App() {
     setAuthModalOpen(true);
   }, []);
 
-  // 登录成功回调（AuthModal 中登录成功后触发）
-  const handleLoginSuccess = useCallback((email: string) => {
+  // 登录/注册成功回调
+  const handleAuthSuccess = useCallback((email: string, type: 'login' | 'register') => {
     setAuthModalOpen(false);
     setIsLoggedIn(true);
 
-    // 注册到本地用户记录（用于管理员后台查看）
-    if (email) {
-      const existingUser = registeredUsers.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
-      if (!existingUser) {
-        const newUserId = `user-${Date.now()}`;
-        const newUser: Partial<Doctor> & { email?: string } = {
-          id: newUserId,
-          name: email.split('@')[0],
-          keywords: [],
-          likes: 0,
-          verified: false,
-          createdAt: new Date().toISOString(),
-          email,
-        };
-        setRegisteredUsers((prev) => [...prev, newUser]);
-        setCurrentUser(newUser);
-      } else {
-        setCurrentUser(existingUser);
-      }
-    }
-
-    // 管理员判断：首位自动提升
-    if (email) {
-      const adminEmails = getAdminEmails();
-      if (adminEmails.length === 0) {
-        addAdminEmail(email);
-        setIsAdminLoggedIn(true);
-        setCurrentPage('admin');
-        message.success('您已成为首位管理员，进入管理后台');
-        return;
-      }
-      if (isAdminEmail(email)) {
-        setIsAdminLoggedIn(true);
-        setCurrentPage('admin');
-        return;
-      }
-    }
-
-    // 普通用户：进入个人中心，处理收藏
-    setCurrentPage('personal');
-    if (favTarget) { setFavorites((prev) => [...prev, favTarget.id]); message.success(`已收藏 ${favTarget.name}`); setFavTarget(null); }
-  }, [favTarget, registeredUsers]);
-
-  // 管理后台登录页成功回调
-  const handleAdminLoginSuccess = useCallback((email: string) => {
-    setIsLoggedIn(true);
-    setIsAdminLoggedIn(true);
-    addAdminEmail(email);
-    
-    // 注册到本地用户记录
+    // 确保用户记录存在
     const existingUser = registeredUsers.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
     if (!existingUser) {
-      const newUser: Partial<Doctor> & { email?: string } = {
-        id: `admin-${Date.now()}`,
+      const newUserId = `user-${Date.now()}`;
+      const newUser = {
+        id: newUserId,
         name: email.split('@')[0],
         keywords: [],
         likes: 0,
         verified: false,
         createdAt: new Date().toISOString(),
-        email,
-      };
+      } as Partial<Doctor>;
+      (newUser as any).email = email;
       setRegisteredUsers((prev) => [...prev, newUser]);
       setCurrentUser(newUser);
     } else {
       setCurrentUser(existingUser);
     }
-    
-    setCurrentPage('admin');
-    message.success('登录成功，进入管理后台');
-  }, [registeredUsers]);
+
+    // 管理员角色判断
+    const superAdmin = getSuperAdminEmail();
+    if (!superAdmin) {
+      // 首位用户自动提升为超级管理员
+      setSuperAdminEmail(email);
+      setIsAdminLoggedIn(true);
+      setCurrentPage('admin');
+      message.success('您已成为首位超级管理员，进入管理后台');
+      return;
+    }
+    if (isAnyAdmin(email)) {
+      setIsAdminLoggedIn(true);
+      setCurrentPage('admin');
+      return;
+    }
+
+    // 普通用户
+    setCurrentPage('personal');
+    if (favTarget) { setFavorites((prev) => [...prev, favTarget.id]); message.success(`已收藏 ${favTarget.name}`); setFavTarget(null); }
+  }, [favTarget, registeredUsers]);
+
+  // 超级管理员指定子管理员
+  const handlePromoteAdmin = useCallback((email: string) => {
+    const subs = getSubAdminEmails();
+    const lower = email.toLowerCase();
+    if (!subs.includes(lower)) {
+      subs.push(lower);
+      localStorage.setItem('ssol_sub_admins', JSON.stringify(subs));
+      message.success(`已将「${email}」设为子管理员`);
+    }
+  }, []);
+
+  // 超级管理员取消子管理员
+  const handleDemoteAdmin = useCallback((email: string) => {
+    const subs = getSubAdminEmails().filter((e) => e !== email.toLowerCase());
+    localStorage.setItem('ssol_sub_admins', JSON.stringify(subs));
+    message.success(`已取消「${email}」的管理员权限`);
+  }, []);
 
   // ==================== 管理员操作 ====================
   const handleApprove = useCallback(async (id: string) => {
@@ -466,19 +435,11 @@ function App() {
     if (isAdminLoggedIn) {
       setCurrentPage('admin');
     } else if (isLoggedIn) {
-      if (isAdminEmail(supabaseUser?.email)) {
+      if (isAnyAdmin(supabaseUser?.email)) {
         setIsAdminLoggedIn(true);
         setCurrentPage('admin');
       } else {
-        const adminEmails = getAdminEmails();
-        if (adminEmails.length === 0 && supabaseUser?.email) {
-          addAdminEmail(supabaseUser.email);
-          setIsAdminLoggedIn(true);
-          setCurrentPage('admin');
-          message.success('您已成为首位管理员');
-        } else {
-          message.warning('您没有管理员权限');
-        }
+        message.warning('您没有管理员权限');
       }
     } else {
       setAuthInitialMode('login');
@@ -632,16 +593,13 @@ function App() {
             onReject={handleReject}
             onUpdateUser={handleUpdateUser}
             onDeleteUser={handleDeleteUser}
+            isSuperAdmin={getSuperAdminEmail() === (supabaseUser?.email?.toLowerCase() || '')}
+            currentUserEmail={supabaseUser?.email}
+            adminEmails={getAllAdminEmails()}
+            onPromoteAdmin={handlePromoteAdmin}
+            onDemoteAdmin={handleDemoteAdmin}
           />
         </>
-      )}
-
-      {/* 管理员登录页 */}
-      {currentPage === 'admin-login' && (
-        <AdminLogin
-          onBack={() => setCurrentPage('home')}
-          onLoginSuccess={handleAdminLoginSuccess}
-        />
       )}
 
       {/* 首页 */}
@@ -656,7 +614,7 @@ function App() {
             onGoUsers={() => setCurrentPage('users')}
             onLogout={handleLogout}
             ipLocation={ipLocation} isLoggedIn={isLoggedIn}
-            isAdmin={isAdminEmail(supabaseUser?.email)}
+            isAdmin={isAnyAdmin(supabaseUser?.email)}
           />
           <div className="main-content">
             <div className="content-left full-width">
@@ -693,11 +651,11 @@ function App() {
         </div>
       )}
 
-      {/* 统一认证弹窗（首页可访问） */}
+      {/* 统一认证弹窗 */}
       <AuthModal
         open={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
+        onAuthSuccess={handleAuthSuccess}
         initialMode={authInitialMode}
       />
     </ConfigProvider>
